@@ -23,7 +23,7 @@ CPPC = g++
 ############################
 
 #### opcoes de compilacao e includes
-CCOPT = $(BITS_OPTION) -O0 -g -fPIC -fexceptions -DNDEBUG -DIL_STD -std=gnu++11 #-std=c++0x #-03 for optimization
+CCOPT = $(BITS_OPTION) -O0 -g -fPIC -fexceptions -DNDEBUG -DIL_STD -std=gnu++11 -pthread#-std=c++0x #-03 for optimization
 CONCERTINCDIR = $(CONCERTDIR)/include
 CPLEXINCDIR   = $(CPLEXDIR)/include
 ADOLINC       = /home/walton/adolc_base/include/
@@ -34,7 +34,7 @@ CCFLAGS = $(CCOPT) -I$(CPLEXINCDIR) -I$(CONCERTINCDIR) -I$(ADOLINC) -I$(AMPLINC)
 #############################
 
 #### flags do linker
-CCLNFLAGS = -L$(CPLEXLIBDIR) -lilocplex -lcplex -L$(CONCERTLIBDIR) -lconcert -L$(ADOLLIBDIR) -ladolc -L$(AMPLLIBDIR) -lampl -fopenmp -lm -lpthread #-L$(CMAESLIBDIR) -lcmaes -lm -lpthread
+CCLNFLAGS = -L$(CPLEXLIBDIR) -lilocplex -lcplex -L$(CONCERTLIBDIR) -lconcert -L$(ADOLLIBDIR) -ladolc -L$(AMPLLIBDIR) -lampl -fopenmp -lm -lpthread -pthread #-L$(CMAESLIBDIR) -lcmaes -lm -lpthread
 ############################
 
 #### diretorios com os source files e com os objs files

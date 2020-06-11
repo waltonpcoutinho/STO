@@ -14,7 +14,6 @@
 #include<algorithm>
 #include<stdio.h>
 #include<ilcplex/ilocplex.h>
-#include<pthread.h>
 #include<assert.h>
 
 #include "Data.h"

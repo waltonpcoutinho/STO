@@ -14,6 +14,7 @@
 #include <cfloat>
 #include <random>
 #include <functional>
+#include <pthread.h>
 
 #include "Data.h"
 #include "Solution.h"
