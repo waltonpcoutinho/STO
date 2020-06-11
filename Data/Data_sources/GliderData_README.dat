@@ -1,0 +1,54 @@
+------------------------------------------------------
+OLD GLIDER
+
+#ρ = 1.225426: density of the air at sea level (kg/m3 )
+#CD0 = 0.00873: coefficient of drag at zero-lift (dimensionless)
+#k = 0.045: is an aerodynamic coefficient (dimensionless)
+#g = 9.80665: gravity of Earth at sea level (m/s2 )
+#m = 81.725857: mass of the glider (kg)
+#S = 4.189651: wing area of the glider (m2)
+#alpha = 45: camera openning angle (degrees)
+#beta = 1: wind strength (1/s)
+
+rad
+1.225426 
+0.00873 
+0.045 
+9.80665 
+81.725857 
+4.189651 
+0.7854
+1
+
+degree
+1.225426 
+0.00873 
+0.045 
+9.80665 
+81.725857 
+4.189651 
+45
+0.025
+
+-----------------------------------------------------------
+NEW GLIDER
+
+
+#ρ = 1.225426: density of the air at sea level (kg/m3 )
+#CD0 = 0.0173: coefficient of drag at zero-lift (dimensionless)
+#k = 0.032: is an aerodynamic coefficient (dimensionless)
+#g = 9.80665: gravity of Earth at sea level (m/s2 )
+#m = 1.99: mass of the glider (kg)
+#S = 0.485: wing area of the glider (m2)
+#alpha = 45: camera openning angle (degrees)
+#beta = 0.025: wind strength (1/s)
+
+rad
+1.225426 
+0.0173
+0.032
+9.80665 
+1.99 
+0.485
+0.785398163
+0.025

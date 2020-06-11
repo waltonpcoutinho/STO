@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#How to run:
+           #bash runampl ../../../Python/InstanceGenerator/S/grtopS_21_1.dat Euler xpressampl8.0 objective datFiles/grtop.dat 
+
+#get parameters from command line
+solver=$1
+mode=$2
+
+export solver
+
+if [ "$mode" == "visiting" ]; then
+   printf "\nAdding visiting constraints\n\n"
+   ampl grtop.mod visiting.mod grtop.run
+fi
+
+if [ "$mode" == "landing" ]; then
+   printf "\nAdding landing constraints\n\n"
+   ampl grtop.mod landing.mod grtop.run
+fi
+
+if [ "$mode" != "visiting" -a "$disc" != "landing" ]; then
+   printf "\nRunning command: bash runampl [Solver] [MODE]\n"
+fi
+
+
+

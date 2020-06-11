@@ -1,0 +1,43 @@
+#----------------------------------------------------------------------------------------------#
+#---------------------------------------"SOLVE PROBLEM"----------------------------------------#
+#----------------------------------------------------------------------------------------------#
+
+data grtop.dat;
+
+#choose a solver
+option solver ($solver);
+
+expand >formulation.lp; 
+
+solve;
+
+#----------------------------------------------------------------------------------------------#
+#------------------------------------"FINISH SOLVE PROBLEM"------------------------------------#
+#----------------------------------------------------------------------------------------------#
+
+#----------------------------------------------------------------------------------------------#
+#-------------------------------------"WRITE SOL. TO FILE"-------------------------------------#
+#----------------------------------------------------------------------------------------------#
+
+
+#param resultsFile symbolic;
+#let resultsFile := "CompResults/results.txt";
+
+#printf "\n\n##### Final Log #####\n\n";
+
+##display some log
+#display (instanceName), beta, noGld, totalG, solve_result, objVal, objVal.bestbound, ($disc), epsilon, epsilon2, _total_solve_elapsed_time, _total_solve_user_time, treeSize, objVal.relmipgap, (getSolver), T+1, totalFlightTime, mks, ltc, h;
+
+#display a;
+#display b;
+
+##print log to file
+#printf: "%s %.4f %d %d %s %.2f %.2f %s %.3f %.3f %.2f %.2f %d %.2f %s %d %d %d %d %.6f \n", (instanceName), beta, noGld, totalG, solve_result, objVal, objVal.bestbound, ($disc), epsilon, epsilon2, _total_solve_elapsed_time, _total_solve_user_time, treeSize, objVal.relmipgap, (getSolver), T+1, totalFlightTime, mks, ltc, h >> (resultsFile);
+
+
+
+
+
+
+
+
