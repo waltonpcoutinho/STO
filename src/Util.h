@@ -45,6 +45,7 @@ void setSeed();
 bool randomBool();
 double fRand(double, double);
 void randomSeq(int*, int);
+void genRandStr(char*, const int);
 double cpuTime();
 double wallTime();
 double l2_norm(const double, const double, const double);

@@ -69,6 +69,24 @@ double l2_norm(const double x, const double y, const double z)
 {
    return sqrt(x*x + y*y + z*z);
 }
+string genRandStr(const int len){
+
+   char key[len];
+
+   static const char alphanum[] =
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
+   
+   default_random_engine generator;
+   uniform_int_distribution<int> uniform(0,sizeof(alphanum)-1);
+
+   for (int i = 0; i < len; i++) {
+      key[i] = alphanum[uniform(generator)];
+   }
+
+   return key;
+}
 
 template<typename Type> void printMatrix(Type mat, int M, int N)
 {
@@ -162,7 +180,7 @@ void writeRes2File(Data const* dataPtr, Solution const* sol)
    double stoNlpTime = sol->stoNlpTime;
 
    //write results to file
-   ofstream writeRes("Results/compResults.out", ios::app);
+   ofstream writeRes("Results/compResults_" + genRandStr(12) + ".out", ios::app);
    writeRes << dataPtr->fileName << " "
             << stoFlTime << " "
             << stoNlpFlTime << " "
