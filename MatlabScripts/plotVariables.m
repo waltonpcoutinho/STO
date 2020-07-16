@@ -1,4 +1,4 @@
-function [] = plotVariables(variables,time)
+function [] = plotVariables(variables,time, titleStr)
     V = variables(:,1);
     pitch = variables(:,2);
     yaw = variables(:,3);
@@ -12,7 +12,8 @@ function [] = plotVariables(variables,time)
     plot(time,yaw);
     plot(time,roll);
     legend('Pitch','Yaw','Roll');
-    xlabel('Time steps')
+    xlabel('Time (s)')
+    title(titleStr);
     
     figure;
     %steps = 1:1:length(V);    
@@ -23,6 +24,7 @@ function [] = plotVariables(variables,time)
     grid on;
     legend('V(t)','Cl(t)');
     xlabel('Time (s)');
+    title(titleStr);
 
 end
 

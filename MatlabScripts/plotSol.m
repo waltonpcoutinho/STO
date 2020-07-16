@@ -1,6 +1,9 @@
 function [] = plotSol(instance)
+
+    labels = ["WORHP","IPOPT"];
+    
     clc;
-    fprintf("plotSol('grtopL_103_2')\n");
+    fprintf("plotSol(%s)\n", instance);
     [inst,traj,minX,minY] = read(instance);
     fprintf('Plotting ... \n');
     %plot waypoints
@@ -21,13 +24,34 @@ function [] = plotSol(instance)
         lineHandle(k) = plotTrajectory(traj.type,gliderTrajectory,T,k);        
     end
     
-    legend(lineHandle, 'STO','STO-NLP');
+    legend(lineHandle, labels(1), labels(2));
     
     %set plot limits
     ax = gca;
     xlim(ax,[minX inf]);
     ylim(ax,[minY inf]);
     zlim(ax,[-10 inf]);
+    
+    %plotSolution
+    for k = 1: traj.nGliders
+        %compute time instants vector        
+        size = traj.routeSizes(k) - 1;
+        time = zeros(size*traj.nTimeSteps,1);
+        t0 = 0;
+        count = 1;
+        for i = 1: size
+            for j = 1: traj.nTimeSteps               
+                time(count) = t0 + (j-1)*traj.gliders(k).steps(i);
+                count = count + 1;
+            end            
+            t0 = time(count-1);
+        end
+        %plot state and control values       
+        gliderStatesAndControls = traj.gliders(k).trajectory(:,4:8);
+        plotVariables(gliderStatesAndControls, time, labels(k));
+    end
+    
+    
 
     %save figure to file
     %figName = strcat(instance, '.fig');

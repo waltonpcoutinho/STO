@@ -3,14 +3,14 @@
 Data::Data(int argc, char** argv)
 {
    //load input 
-   if(argc < 4){
+   if(argc < 5){
       cerr << "Not enough input arguments! " << endl;
-      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE]" << endl;
+      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE]" << endl;
       exit(1);
    }
-   if(argc > 4){//
+   if(argc > 5){//
       cerr << "Too many input arguments! " << endl;
-      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE]" << endl;
+      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE]" << endl;
       exit(1);
    }
    //extract instance name from file   
@@ -22,6 +22,9 @@ Data::Data(int argc, char** argv)
    PI = 4*atan(1);   
    maxFleetSize = atoi(argv[3]);
    printf("\nDiscretisation size: %d\n",T);
+
+   //get instance type
+   instType = argv[4];
 
    //read instance
    ifstream readInst(instPath, ios::in);

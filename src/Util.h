@@ -57,7 +57,7 @@ void printRoutes(vector<glider> gliders);
 double routeTotalFlightTime(glider uav);
 double routeTotalError(glider uav);
 double routeAvgStep(glider uav);
-void writeRes2File(Data const*, Solution const*);
+void writeRes2File(Data const*, Solution const*, string instType);
 void writeInfList(Data const*);
 
 void writeSol2File(Data const*, vector<glider>);

@@ -83,7 +83,7 @@ int main(int argc, char** argv)
    writeSol2File(dataPtr,sol->globalSol);
    
    //write results to file
-   writeRes2File(dataPtr,sol);
+   writeRes2File(dataPtr,sol,dataPtr->instType);
 
    //delete pointers
    delete sol;

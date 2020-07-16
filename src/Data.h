@@ -29,6 +29,7 @@ class Data{
       int noWaypoints;
       int noLandPoints;
       string fileName;
+      string instType;
       //instance data
       double* depot;
       double* xBar;

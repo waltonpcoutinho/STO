@@ -73,10 +73,7 @@ string genRandStr(const int len){
 
    char key[len];
 
-   static const char alphanum[] =
-      "0123456789"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz";
+   static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
    
    default_random_engine generator;
    uniform_int_distribution<int> uniform(0,sizeof(alphanum)-1);
@@ -163,7 +160,7 @@ double routeAvgStep(glider uav){
    return totalStep/routeSize;
 }
 
-void writeRes2File(Data const* dataPtr, Solution const* sol)
+void writeRes2File(Data const* dataPtr, Solution const* sol, string instType)
 {
    vector<glider> glob = sol->globalSol;
 
@@ -180,7 +177,8 @@ void writeRes2File(Data const* dataPtr, Solution const* sol)
    double stoNlpTime = sol->stoNlpTime;
 
    //write results to file
-   ofstream writeRes("Results/compResults_" + genRandStr(12) + ".out", ios::app);
+   string resultsPath = "Results/compResults_" + instType + ".out";
+   ofstream writeRes(resultsPath, ios::app);
    writeRes << dataPtr->fileName << " "
             << stoFlTime << " "
             << stoNlpFlTime << " "

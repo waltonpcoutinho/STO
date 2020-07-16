@@ -215,11 +215,9 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    if(output.getStatus().find("solved") != string::npos){
       status = 1;
       //cout << "Optimal Solution found by NLP solver" << endl;
-
-      // Get objective value
-      error = ampl.getObjective("objective").value();
-
+      
       //Get solution value
+      error = ampl.getValue("epsilon").dbl();
       flightTime = ampl.getValue("tf").dbl();
       step = ampl.getValue("h").dbl();
 
