@@ -518,6 +518,12 @@ void Dynamics::computeFlightDist()
    for(int i = 0; i < numRows; i++){
       flightDist[i] = new double [numCols];
    }
+
+   for(int i = 0; i < numRows; i++){
+      for(int j = 0; j < numCols; j++){
+         flightDist[i][j] = 0;
+      }
+   }
    
    //fill in flight time matrix
    for(int i = 0; i < numRows; i++){
@@ -529,8 +535,10 @@ void Dynamics::computeFlightDist()
             flightDist[i][j] = DBL_MAX;
          }else{
             if(i == 0){
-               int jj = j - 1;
-               flightDist[i][j] = dataPtr->distFromDepot[jj];
+               if(j <= nWaypoints){
+                  int jj = j - 1;
+                  flightDist[i][j] = dataPtr->distFromDepot[jj];
+               }
             }else if(j > nWaypoints){
                int ii = i - 1;
                int jj = j - (nWaypoints + 1);

@@ -7,6 +7,7 @@ void setSeed()
 {
    // initialise random seed
    int seed = time(NULL);
+   seed = 1597872563;
    srand(seed);
    cout << "\n\nRandom seed: " << seed << endl;
 }
@@ -136,7 +137,7 @@ void printRoutes(vector<glider> gliders)
 double routeTotalFlightTime(glider uav){
    double totalTime = 0;
    int routeSize = uav.route.size();
-   for(int i = 0; i < routeSize ; i++){
+   for(int i = 0; i < routeSize - 1; i++){
       totalTime += uav.flightTimes[i];
    }
    return totalTime;
@@ -145,7 +146,7 @@ double routeTotalFlightTime(glider uav){
 double routeTotalError(glider uav){
    double totalError = 0;
    int routeSize = uav.route.size();
-   for(int i = 0; i < routeSize ; i++){
+   for(int i = 0; i < routeSize - 1; i++){
       totalError += uav.errors[i];
    }
    return totalError;
@@ -154,7 +155,7 @@ double routeTotalError(glider uav){
 double routeAvgStep(glider uav){
    double totalStep = 0;
    int routeSize = uav.route.size();
-   for(int i = 0; i < routeSize ; i++){
+   for(int i = 0; i < routeSize - 1; i++){
       totalStep += uav.stepSizes[i];
    }
    return totalStep/routeSize;
@@ -162,16 +163,23 @@ double routeAvgStep(glider uav){
 
 void writeRes2File(Data const* dataPtr, Solution const* sol, string instType)
 {
-   vector<glider> glob = sol->globalSol;
+   //cout << "globalSol size = " << sol->globalSol.size() << endl;
+   //for(int i = 0; i < sol->globalSol.size(); i++){
+      //cout << "glider " << i << endl;
+      //int routeSize = sol->globalSol[i].route.size();
+      //cout << "glider's route size = " << routeSize << endl;
+      ////for(int j = 0; routeSize; j++){
+      ////}
+   //}
 
-   double stoFlTime = routeTotalFlightTime(glob[0]);
-   double stoNlpFlTime = routeTotalFlightTime(glob[1]);
+   double stoFlTime = routeTotalFlightTime(sol->globalSol[0]);
+   double stoNlpFlTime = routeTotalFlightTime(sol->globalSol[1]);
 
-   double stoError = routeTotalError(glob[0]);
-   double stoNlpError = routeTotalError(glob[1]);
+   double stoError = routeTotalError(sol->globalSol[0]);
+   double stoNlpError = routeTotalError(sol->globalSol[1]);
 
-   double stoStep = routeAvgStep(glob[0]);
-   double stoNlpStep = routeAvgStep(glob[1]);
+   double stoStep = routeAvgStep(sol->globalSol[0]);
+   double stoNlpStep = routeAvgStep(sol->globalSol[1]);
 
    double stoTime = sol->stoTime;
    double stoNlpTime = sol->stoNlpTime;
