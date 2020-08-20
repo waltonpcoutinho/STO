@@ -170,6 +170,12 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       rTilde.set(arc.fRadius);
    }
    
+   //setting the value of \tau_f for avoiding 
+   //solutions with \tau_f = 0
+   ampl::Parameter AMPLtflb = ampl.getParameter("tflb");
+   cout << "minimum flight time = " << arc.deltaTa << endl;
+   AMPLtflb.set(arc.deltaTa);
+   
    /*
     * end of setting the values of the parameters
     */
@@ -220,6 +226,10 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       error = ampl.getValue("epsilon").dbl();
       flightTime = ampl.getValue("tf").dbl();
       step = ampl.getValue("h").dbl();
+
+      cout << "optimal flight time = " << flightTime << endl;
+      cout << "optimal step size = " << step << endl;
+      cout << endl;
 
       // Get the values of the variables Y and U in dataframes
       ampl::DataFrame state = ampl.getVariable("Y").getValues();

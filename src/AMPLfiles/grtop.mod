@@ -47,6 +47,7 @@ param Ylb{States};
 param Ulb{Controls};
 param Yub{States};
 param Uub{Controls};
+param tflb;
 
 #"vertices locations"
 param xBar;
@@ -114,6 +115,9 @@ perturbation1{t in Time, c in Controls}:
     U[t,c] >= (t/(N-1))*(Ueq[c] - xi) + Ulb[c]*(((N-1)-t)/(N-1));
 perturbation2{t in Time, c in Controls}: 
     U[t,c] <= (t/(N-1))*(Ueq[c] + xi) + Uub[c]*(((N-1)-t)/(N-1));
+    
+tf_lower_bound:
+   tf >= tflb;
 
 
 

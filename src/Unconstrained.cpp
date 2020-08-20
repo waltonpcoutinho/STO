@@ -70,7 +70,6 @@ Unconstrained::minFlightTime(CPLEXmodel* modelPtr, Dynamics::dynamics leg, doubl
    
    //find a feasible ta
    while(fa >= INF && ta <= tb){
-      ta++;
       status = modelPtr->solveModel(leg,t0,ta);
       preIter++;
       if(status == IloAlgorithm::Optimal){
@@ -78,7 +77,10 @@ Unconstrained::minFlightTime(CPLEXmodel* modelPtr, Dynamics::dynamics leg, doubl
          fa = penal*ta + modelPtr->objVal;
          stepa = modelPtr->h;
          errora = modelPtr->error;
-      }else fa = INF;
+      }else{
+         fa = INF;
+         ta++;
+      }      
    }
    
    //copy optimal solution and respective step size
