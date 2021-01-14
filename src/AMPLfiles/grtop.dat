@@ -68,6 +68,13 @@ param U0 :=
 1 0
 2 0
 ;
+
+param norm_yDotub := 0;
+param norm_uDotub := 0;
+
+param normA := 0;
+param normB := 0;
+
 param UbarH := 0;
 param barH := 0;
 param hatGamma := 0;

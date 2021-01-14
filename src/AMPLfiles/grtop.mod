@@ -31,6 +31,8 @@ set Controls := {1..2};
 #"define the system's matrices"
 param A{States,States};
 param B{States,Controls};
+param normA;
+param normB;
 
 #"equilibrium conditions"
 param Yeq{States};
@@ -47,6 +49,15 @@ param Ylb{States};
 param Ulb{Controls};
 param Yub{States};
 param Uub{Controls};
+
+#"upper bound on norm of derivatives"
+param norm_yDotub;
+param norm_uDotub;
+
+#"auxiliary variable for computing the norm on eps"
+param overall_norm = normA*norm_yDotub + normB*norm_uDotub;
+
+#"lower bound on flight time"
 param tflb;
 
 #"vertices locations"
@@ -57,13 +68,13 @@ param rBar;
 param coneMinZ;
 param coneMaxZ;
 
-#landing zones locations
+#"landing zones locations"
 param xTilde;
 param yTilde;
 param hTilde;
 param rTilde;
 
-#photographing parameters
+#"photographing parameters"
 param UbarH;
 param barH;
 param hatGamma;
@@ -72,31 +83,33 @@ param hatMu;
 #----------------------------------------------------------------------------------------------#
 #--------------------------------------"DEFINE VARIABLES"--------------------------------------#
 #----------------------------------------------------------------------------------------------#
-#state variables
+#"state variables"
 var Y{Time,States};
 var U{Time,Controls};
 
-#discretization error
-var epsilon >= 0;
+#"discretization error"
+var epsilon{Time,States};
+var z{Time} >= 1e-3;
 
-#final time and step size
+#"final time and step size"
 var tf >= 0;
 var h = tf/(N-1);
 
 #----------------------------------------------------------------------------------------------#
 #-------------------------------------"WRITE OPT. PROBLEM"-------------------------------------#
 #----------------------------------------------------------------------------------------------#
-minimize objective: tf + epsilon; 
+
+minimize objective: tf + sum{t in Time} z[t]; 
 
 subject to
 
 #"dynamic Euler constraints"
 EOMs1{t in 0..(N-2), s in States}:
 Y[t+1,s] >= Y[t,s] + h*(sum{j in States} A[s,j]*(Y[t,j] - Yeq[j])
-                   + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) - epsilon;
+                   + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) - epsilon[t,s];
 EOMs2{t in 0..(N-2), s in States}:
 Y[t+1,s] <= Y[t,s] + h*(sum{j in States} A[s,j]*(Y[t,j] - Yeq[j])
-                   + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) + epsilon;
+                   + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) + epsilon[t,s];
 
 #"initial states"
 InitY{s in States}:  Y[0,s] = Y0[s];
@@ -115,11 +128,16 @@ perturbation1{t in Time, c in Controls}:
     U[t,c] >= (t/(N-1))*(Ueq[c] - xi) + Ulb[c]*(((N-1)-t)/(N-1));
 perturbation2{t in Time, c in Controls}: 
     U[t,c] <= (t/(N-1))*(Ueq[c] + xi) + Uub[c]*(((N-1)-t)/(N-1));
-    
-tf_lower_bound:
-   tf >= tflb;
 
+#"lower bound on the flight time"
+tf_lower_bound: tf >= tflb;
 
+#"constraints on the norm of epsilon"
+normEps1{t in Time, s in States}: z[t] >=   epsilon[t,s];
+normEps2{t in Time, s in States}: z[t] >= - epsilon[t,s];
+
+#"upper bound on the local truncation errors"
+auxEpsBounds{t in Time}: z[t] <= 0.5*h^2*overall_norm; 
 
 
 

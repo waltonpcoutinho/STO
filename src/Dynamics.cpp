@@ -38,11 +38,27 @@ Dynamics::Dynamics(Data* data)
       cerr << "Failed to open data file in Data/" << endl;
       exit(1);
    }
+   //bounds on variables
    readBounds >> vLb >> vUb;
    readBounds >> gammaLb >> gammaUb;
    readBounds >> phiLb >> phiUb;
    readBounds >> CLlb >> CLub;
    readBounds >> muLb >> muUb;
+   //bounds on derivatives
+   readBounds >> xDot_ub;
+   readBounds >> yDot_ub;
+   readBounds >> hDot_ub;
+   readBounds >> vDot_ub;
+   readBounds >> gammaDot_ub;
+   readBounds >> phiDot_ub;
+   readBounds >> CLDot_ub;
+   readBounds >> muDot_ub;
+
+   double stateDotUb[] = {xDot_ub, yDot_ub, hDot_ub, vDot_ub, gammaDot_ub, phiDot_ub};
+   double ctrlDotUb[] = {CLDot_ub, muDot_ub};
+
+   yDotUbMaxNorm = *max_element(stateDotUb, stateDotUb + 6);
+   uDotUbMaxNorm = *max_element(ctrlDotUb, ctrlDotUb + 2);
 
    //compute A, B and the stead state conditions
    //for all pairs of vertices
@@ -400,11 +416,35 @@ void Dynamics::computeDynamics()
             double deltaS = sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ);
             legDyn[i][j].deltaTa = deltaS/vUb;
             legDyn[i][j].deltaTb = deltaS/vLb;
+            
             //compute the respective steady state values
             //for the given leg
             steadyState(&legDyn[i][j]);
             gliderODE_ADOL(legDyn[i][j]);
-            ODE_Jac(&legDyn[i][j]);            
+            ODE_Jac(&legDyn[i][j]);
+
+            //compute max norms of A and B
+            double maxA = 0;
+            for(int s1 = 0; s1 < stateSize; s1++){
+               for(int s2 = 0; s2 < stateSize; s2++){
+                  double aux = abs(legDyn[i][j].stateMatrix[s1][s2]);
+                  if(aux > maxA){
+                     maxA = aux;
+                  }
+               }
+            }
+            legDyn[i][j].stateMatrixMaxNorm = maxA;
+            
+            double maxB = 0;
+            for(int s = 0; s < stateSize; s++){
+               for(int c = 0; c < controlSize; c++){
+                  double aux = abs(legDyn[i][j].controlMatrix[s][c]);
+                  if(aux > maxB){
+                     maxB = aux;
+                  }
+               }
+            }
+            legDyn[i][j].ctrlMatrixMaxNorm = maxB;
          }
       }
    }
@@ -762,5 +802,20 @@ bool Dynamics::checkRouteStatus(vector<int>& route, int routeSize)
    return true;
 
 }
+
+double Dynamics::dynamics::getMaxNormA() const
+{
+   return stateMatrixMaxNorm;
+}
+
+double Dynamics::dynamics::getMaxNormB() const
+{
+   return ctrlMatrixMaxNorm;
+}
+
+
+
+
+
 
 

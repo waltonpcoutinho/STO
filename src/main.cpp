@@ -25,6 +25,16 @@ using namespace std;
 
 void callTrajOpt(glider& route, Data* data, Dynamics* dyn, CPLEXmodel* model, AMPLmodel* nlp, string method);
 
+double getRoutelb(glider uav, Dynamics* dynPtr){
+   double lb = 0;
+   int routeSize = uav.route.size();
+   for(int k = 0; k < routeSize - 1; k++){
+      const Dynamics::dynamics leg = dynPtr->getLeg(uav.route[k],uav.route[k+1]);
+      lb += leg.deltaTa;
+   }
+   return lb;
+}
+
 int main(int argc, char** argv) 
 {
    //set random seed (user function)
@@ -66,24 +76,39 @@ int main(int argc, char** argv)
    drone.route.push_back(landingSpot);
 
    //call STO-NLP
-   nlpPtr->setLocalSolver("worhp_ampl");
-   double startSTO = wallTime();
-   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
-   sol->stoTime = wallTime() - startSTO;
-   sol->globalSol.push_back(drone);
-   
-   //call STO-NLP
    nlpPtr->setLocalSolver("ipopt");
    double startSTONLP = wallTime();
    callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
    sol->stoNlpTime = wallTime() - startSTONLP;
+   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   cout << "STO-NLP time(s) " << sol->stoNlpTime << endl;
    sol->globalSol.push_back(drone);
+   
+   //call STO-NLP
+   nlpPtr->setLocalSolver("worhp_ampl");
+   double startSTONLP2 = wallTime();
+   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   sol->stoTime = wallTime() - startSTONLP2;
+   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   cout << "STO-NLP time(s) " << sol->stoTime << endl;
+   sol->globalSol.push_back(drone);
+   
+   ////call STO-iterative
+   //double startSTO = wallTime();
+   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO");
+   //sol->stoTime = wallTime() - startSTO;
+   //cout << "STO ojb. val. = " << drone.routeCost << endl;
+   //cout << "STO time(s) " << sol->stoTime << endl;
+   //sol->globalSol.push_back(drone);
+   
+   double routeLb = getRoutelb(drone, gliderPtr);
+   cout << "\n\n Lower bound on the flight time = " << routeLb << endl;
 
    //write solution to file
    writeSol2File(dataPtr,sol->globalSol);
    
    //write results to file
-   writeRes2File(dataPtr,sol,dataPtr->instType);
+   writeRes2File(dataPtr,routeLb,sol,dataPtr->instType);
 
    //delete pointers
    delete sol;
@@ -137,7 +162,7 @@ void callTrajOpt(glider& drone, Data* data, Dynamics* dyn, CPLEXmodel* model, AM
       for(int j = 0; j < rSize - 1; j++){
          //Computation of the real objective function value
          //arc cost
-         double arcCost = drone.flightTimes[j];
+         double arcCost = drone.flightTimes[j] + drone.errors[j];
          drone.routeCost += arcCost;
       }     
    }else{

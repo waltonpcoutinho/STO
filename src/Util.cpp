@@ -1,8 +1,5 @@
 #include "Util.h"
 
-double fleetSize_util = 0;
-double availGlider_utils = 0;
-
 void setSeed()
 {
    // initialise random seed
@@ -161,7 +158,7 @@ double routeAvgStep(glider uav){
    return totalStep/routeSize;
 }
 
-void writeRes2File(Data const* dataPtr, Solution const* sol, string instType)
+void writeRes2File(Data const* dataPtr, double lb, Solution const* sol, string instType)
 {
    //cout << "globalSol size = " << sol->globalSol.size() << endl;
    //for(int i = 0; i < sol->globalSol.size(); i++){
@@ -172,30 +169,31 @@ void writeRes2File(Data const* dataPtr, Solution const* sol, string instType)
       ////}
    //}
 
-   double stoFlTime = routeTotalFlightTime(sol->globalSol[0]);
-   double stoNlpFlTime = routeTotalFlightTime(sol->globalSol[1]);
+   double stoNlpFlTime = routeTotalFlightTime(sol->globalSol[0]);
+   double stoFlTime = routeTotalFlightTime(sol->globalSol[1]);
 
-   double stoError = routeTotalError(sol->globalSol[0]);
-   double stoNlpError = routeTotalError(sol->globalSol[1]);
+   double stoNlpError = routeTotalError(sol->globalSol[0]);
+   double stoError = routeTotalError(sol->globalSol[1]);
 
-   double stoStep = routeAvgStep(sol->globalSol[0]);
-   double stoNlpStep = routeAvgStep(sol->globalSol[1]);
+   double stoNlpStep = routeAvgStep(sol->globalSol[0]);
+   double stoStep = routeAvgStep(sol->globalSol[1]);
 
-   double stoTime = sol->stoTime;
    double stoNlpTime = sol->stoNlpTime;
+   double stoTime = sol->stoTime;
 
    //write results to file
    string resultsPath = "Results/compResults_" + instType + ".out";
    ofstream writeRes(resultsPath, ios::app);
    writeRes << dataPtr->fileName << " "
-            << stoFlTime << " "
+            << lb << " "
             << stoNlpFlTime << " "
-            << stoError << " " 
+            << stoFlTime << " "
             << stoNlpError << " " 
-            << stoStep << " " 
+            << stoError << " " 
             << stoNlpStep << " " 
-            << stoTime << " "
-            << stoNlpTime << endl;
+            << stoStep << " " 
+            << stoNlpTime << " "
+            << stoTime << endl;
    writeRes.close();
 }
 

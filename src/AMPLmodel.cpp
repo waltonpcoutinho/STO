@@ -21,12 +21,52 @@ AMPLmodel::AMPLmodel(Data* data, Dynamics* glider, int T)
    //default local solver
    localSolver = "worhp_ampl";
 }	
+
 AMPLmodel::~AMPLmodel()
 {
    //comment
 }
-void AMPLmodel::setLocalSolver(string solver){
+void AMPLmodel::setLocalSolver(string solver)
+{
    localSolver = solver;
+}
+
+double AMPLmodel::errorNorm(ampl::AMPL* ampl)
+{
+   double sum = 0;
+   
+   int state = gliderPtr->stateSize;
+   int ctrl = gliderPtr->controlSize;
+
+   double** errorMatrix;
+   errorMatrix = new double* [dscrtSize];
+   for(int t = 0; t < dscrtSize; t++){
+      errorMatrix[t] = new double [state];
+   }
+
+   // Get the values of the error variables
+   ampl::DataFrame errors = ampl->getVariable("epsilon").getValues();
+   int rowIdx = 0;
+   for(int t = 0; t < errors.getNumRows(); t++){
+      ampl::DataFrame::Row row = errors.getRowByIndex(t); 
+      int col = row[1].dbl() - 1; //AMPL cols start by 1
+      errorMatrix[rowIdx][col] = row[2].dbl();
+      if(col == 5){
+         rowIdx++;
+      }
+   }
+
+   for(int t = 0; t < dscrtSize; t++){
+      double sumSquare = 0;
+      for(int i = 0; i < state; i++){
+         sumSquare += errorMatrix[t][i]*errorMatrix[t][i];
+      }
+      sum += sqrt(sumSquare);
+   }
+
+   cout << "Error norm = " << sum << endl;
+
+   return sum;
 }
 
 int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step, double& error)
@@ -38,6 +78,12 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    //control lower and upper bound
    const double Ulb[] = {gliderPtr->CLlb, gliderPtr->muLb};
    const double Uub[] = {gliderPtr->CLub, gliderPtr->muUb};
+   
+   //norms of derivatives and matrices
+   const double normuDotUb = gliderPtr->uDotUbMaxNorm;
+   const double normyDotUb = gliderPtr->yDotUbMaxNorm;
+   const double normA = arc.getMaxNormA();
+   const double normB = arc.getMaxNormB();
    
    //make a copy of the system's data
    const int stateSize = gliderPtr->stateSize;
@@ -131,6 +177,17 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    AMPLUlb.setValues(Ulb, 2);
    AMPLUub.setValues(Uub, 2);
    
+   //set the values of the upper bunds on norms
+   ampl::Parameter AMPLnorm_yDotUb = ampl.getParameter("norm_yDotub");
+   ampl::Parameter AMPLnorm_uDotUb = ampl.getParameter("norm_uDotub");
+   AMPLnorm_yDotUb.set(normyDotUb);
+   AMPLnorm_uDotUb.set(normuDotUb);
+   
+   ampl::Parameter AMPLnormA = ampl.getParameter("normA");
+   ampl::Parameter AMPLnormB = ampl.getParameter("normB");
+   AMPLnormA.set(normA);
+   AMPLnormB.set(normB);
+   
    //set the values of Y0, U0
    ampl::Parameter AMPLY0 = ampl.getParameter("Y0");
    ampl::Parameter AMPLU0 = ampl.getParameter("U0");
@@ -182,6 +239,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
 
    //export model
    ampl.eval("expand >Results/NLPmodel.lp;");
+   ampl.eval("write bResults/NLPmodel;");
    
    /*
     * Call optmimiser
@@ -207,7 +265,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    string message = output.getStatus();
    if(localSolver == "worhp_ampl"){
       cout << "WORHP-log:" << endl;
-      cout << message.substr(19,string::npos);
+      cout << message.substr(0,string::npos);
       cout << flush;
    }else if(localSolver == "ipopt"){
       cout << "IPOPT-log:" << endl;
@@ -223,7 +281,8 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       //cout << "Optimal Solution found by NLP solver" << endl;
       
       //Get solution value
-      error = ampl.getValue("epsilon").dbl();
+      //error = ampl.getValue("epsilon").dbl();
+      error = errorNorm(&ampl);
       flightTime = ampl.getValue("tf").dbl();
       step = ampl.getValue("h").dbl();
 

@@ -41,6 +41,8 @@ class Dynamics{
          double* Ueq;
          double** stateMatrix;
          double** controlMatrix;
+         double stateMatrixMaxNorm;
+         double ctrlMatrixMaxNorm;
          public:
          int orig;
          int dest;
@@ -58,6 +60,8 @@ class Dynamics{
          double get_Ueq(int) const;
          double get_A(int,int) const;
          double get_B(int,int) const;
+         double getMaxNormA() const;
+         double getMaxNormB() const;
          void get_leg(int&,int&,bool&) const;
          bool getStatus() const;
          bool isLanding;
@@ -84,6 +88,17 @@ class Dynamics{
       double phiUb;//(degrees->rad)
       double CLub;
       double muUb;//(degrees->rad)
+      //upper bounds on derivatives of states and control
+      double xDot_ub;
+      double yDot_ub;
+      double hDot_ub;
+      double vDot_ub;
+      double gammaDot_ub;
+      double phiDot_ub;
+      double CLDot_ub;
+      double muDot_ub;//(degrees->rad)
+      double yDotUbMaxNorm;
+      double uDotUbMaxNorm;
       //wind data
       double rho;//density of the air at sea level (kg/m3)
       double beta;// wind strength (1/s);

@@ -28,13 +28,16 @@ class AMPLmodel{
       Dynamics *gliderPtr;
       string localSolver;
 
+      double errorNorm(ampl::AMPL* ampl);
+
 };
 
 class MyOutputHandler : public ampl::OutputHandler{
 
    public:
 
-      void output(ampl::output::Kind kind, const char* message){
+      void output(ampl::output::Kind kind, const char* message)
+      {
          if(kind == ampl::output::DISPLAY){
             setStatus(message);
          }
@@ -49,15 +52,53 @@ class MyOutputHandler : public ampl::OutputHandler{
          }
       }
 
-      string getStatus(){
+      string getStatus()
+      {
          return status;
       }
 
    private:
       string status;
 
-      void setStatus(const char* message){
+      void setStatus(const char* message)
+      {
          status = message;
       }
 };
+
+//class MyErrorHandler : public ampl::ErrorHandler{
+//
+   //public:
+//
+      //void error(const ampl::AMPLException& exception)
+      //{
+         //cout << exception.getMessage() << endl;
+         //setStatus(exception.getMessage());
+      //}
+//
+      //void warning(const ampl::AMPLException& exception)
+      //{
+         //cout << exception.getMessage() << endl;
+         //setStatus(exception.getMessage());
+      //}
+      //
+      //string getError()
+      //{
+         //if(!msg.empty()){
+            //return msg;
+         //}
+      //}
+//
+   //private:
+      //string msg;
+//
+      //void setStatus(const string& message)
+      //{
+         //if(!message.empty()){
+            //msg = message;
+         //}
+      //}
+//
+//};
+
 #endif
