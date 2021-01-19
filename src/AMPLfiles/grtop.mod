@@ -93,7 +93,7 @@ var z{Time} >= 1e-3;
 
 #"final time and step size"
 var tf >= 0;
-var h = tf/(N-1) <= 1;
+var h = tf/(N-1);
 
 #----------------------------------------------------------------------------------------------#
 #-------------------------------------"WRITE OPT. PROBLEM"-------------------------------------#
@@ -137,8 +137,7 @@ normEps1{t in Time, s in States}: z[t] >=   epsilon[t,s];
 normEps2{t in Time, s in States}: z[t] >= - epsilon[t,s];
 
 #"upper bound on the local truncation errors"
-auxEpsBounds{t in Time}: z[t] <= 0.5*h^2*overall_norm; 
-
+auxEpsBounds{t in Time}: z[t] <= 0.5*h^2*overall_norm;
 
 
 
