@@ -101,8 +101,9 @@ IloAlgorithm::Status CPLEXmodel::solveModel(const Dynamics::dynamics leg, double
          tree = SOCP.getNnodes64();
          numIter = SOCP.getNiterations64(); 
       }else{
-         cerr << status << endl;
+         cerr << "CPLEX " << status << endl;
          objVal = IloInfinity;
+         error = IloInfinity;
          time = SOCP.getTime();
          tree = SOCP.getNnodes64();
          numIter = SOCP.getNiterations64();

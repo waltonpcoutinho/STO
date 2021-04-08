@@ -20,7 +20,7 @@ for instance in allFiles:
    noWaypoints = int(instanceName[7:9])
    print("Running instance: " + instanceName)
    print("Number of waypoints:", noWaypoints)
-   command = "./exeGTO " + myPath + instance + " 50 " + str(maxFleetSize) + "  " + instanceType
+   command = "./exeGTO " + myPath + instance + " 50 " + str(maxFleetSize) + "  " + instanceType + " STO "
    print(command)
    var = os.system(command);
    if (var == 2):

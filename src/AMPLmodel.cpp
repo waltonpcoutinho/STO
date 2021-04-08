@@ -416,6 +416,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    //Display solver's message
    ampl.eval("display solve_message;");
    string message = output.getStatus();
+   cout << "##message: " << message << endl;
    if(localSolver == "worhp_ampl"){
       cout << "WORHP-log:" << endl;
       cout << message.substr(0,string::npos);
@@ -474,6 +475,9 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
 
    }else{
       cout << "\n\n Failed to solve NLP!, line 475 AMPLmodel.cpp \n\n" << endl;
+      error = DBL_MAX;
+      flightTime = DBL_MAX;
+      step = DBL_MAX;
    }
 
    //reset and close AMPL env

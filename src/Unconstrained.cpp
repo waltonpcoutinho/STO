@@ -78,6 +78,7 @@ Unconstrained::minFlightTime(CPLEXmodel* modelPtr, Dynamics::dynamics leg, doubl
          stepa = modelPtr->h;
          errora = modelPtr->error;
       }else{
+         cout << "Increase t_a, "<< __FILE__ << __LINE__<< endl;
          fa = INF;
          ta++;
       }      
