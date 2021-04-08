@@ -166,6 +166,11 @@ double** normTaylor1st, double** relEpsilons)
              * FINISH STO+STO-NLP
              */
             }
+            
+            if(status != IloAlgorithm::Optimal){
+               cerr << "\n\n  ### TrajOpt.cpp line 171 ### \n\n" << endl;
+               exit(1);
+            }
 
             //set up STO solution as initial guess for STO-NLP
             for(int ii = 0; ii < T; ii++){

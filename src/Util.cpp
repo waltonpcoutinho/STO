@@ -4,7 +4,7 @@ void setSeed()
 {
    // initialise random seed
    int seed = time(NULL);
-   //seed = 1613090975;
+   seed = 1617906577;
    srand(seed);
    cout << "\n\nRandom seed: " << seed << endl;
 }

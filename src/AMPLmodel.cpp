@@ -428,6 +428,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
 
    //Trigger the output handler
    ampl.eval("display solve_result;");
+   cout << "##" << output.getStatus() << endl;
    //Get output message
    if(output.getStatus().find("solved") != string::npos){
       status = 1;
@@ -472,7 +473,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       relativeErrors = computeRelativeError(arc);
 
    }else{
-      cout << "Failed to solve NLP!" << endl;
+      cout << "\n\n Failed to solve NLP!, line 475 AMPLmodel.cpp \n\n" << endl;
    }
 
    //reset and close AMPL env
