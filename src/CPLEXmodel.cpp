@@ -4,16 +4,29 @@ ILOSTLBEGIN // import namespace std
 
 CPLEXmodel::CPLEXmodel(Data* data, Dynamics* glider, int T)
    :dataPtr(data), gliderPtr(glider)
-   //xt(env), yt(env), zt(env), x(env,T), y(env,T), z(env,T),
-   //vt(env), gammat(env), phit(env), CLt(env), mut(env),
-   //vel(env,T), gamma(env,T), phi(env,T), CL(env,T), mu(env,T),
-   //epsilon(env, 0, IloInfinity, ILOFLOAT)
 {
    this->T = dataPtr->T;
 }	
 CPLEXmodel::~CPLEXmodel()
 {
    env.end();
+}
+
+double CPLEXmodel::errorNorm(IloArray<IloNumArray> epst)
+{
+   double max = 0;
+   
+   int state = gliderPtr->stateSize;
+
+   for(int t = 0; t < T; t++){
+      for(int s = 0; s < state; s++){
+         if(epst[t][s] > max){
+            max = epst[t][s];
+         }
+      }
+   }
+
+   return max;
 }
 
 IloAlgorithm::Status CPLEXmodel::solveModel(const Dynamics::dynamics leg, double t0, double tf)
@@ -44,7 +57,15 @@ IloAlgorithm::Status CPLEXmodel::solveModel(const Dynamics::dynamics leg, double
    this->CLt = IloNumArray(env,T);
    this->mut = IloNumArray(env,T);
 
-   this->epsilon = IloNumVar(env, 0, IloInfinity, ILOFLOAT, "_eps");
+   //Declaring the error variables
+   const int stateSize = gliderPtr->stateSize;
+   this->epsilon = IloArray<IloNumVarArray>(env, T);
+   this->epst = IloArray<IloNumArray>(env, T);
+   for(int t = 0; t < T; t++){
+      this->epst[t] = IloNumArray(env, stateSize); 
+   }
+   this->auxZ = IloNumVarArray(env,T);
+
    try{
       //create model
       createModel(model,leg,t0,tf);
@@ -68,11 +89,14 @@ IloAlgorithm::Status CPLEXmodel::solveModel(const Dynamics::dynamics leg, double
          SOCP.getValues(phit,phi);
          SOCP.getValues(CLt,CL);
          SOCP.getValues(mut,mu);
-         error = SOCP.getValue(epsilon);
+         for(int t = 0; t < T; t++){
+            SOCP.getValues(epst[t],epsilon[t]);
+         }
          //populate solution matrix
          popSolMatrix(xt,yt,zt,vt,gammat,phit,CLt,mut);
          //get solution information
          objVal = SOCP.getObjValue();
+         error = errorNorm(epst);
          time = SOCP.getTime();
          tree = SOCP.getNnodes64();
          numIter = SOCP.getNiterations64(); 
@@ -145,6 +169,12 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
    //update x,y,z components of equilibrium conditions
    const double Yeq[] = {Yo[0],Yo[1],Yo[2],leg.get_Yeq(3),leg.get_Yeq(4),leg.get_Yeq(5)};   
    const double Ueq[] = {leg.get_Ueq(0),leg.get_Ueq(1)};   
+   
+   //norms of derivatives and matrices
+   const double normuDotUb = gliderPtr->uDotUbMaxNorm;
+   const double normyDotUb = gliderPtr->yDotUbMaxNorm;
+   const double normA = leg.getMaxNormA();
+   const double normB = leg.getMaxNormB();
 
    //step size
    h = (tf - t0)/(double)(T-1);
@@ -211,12 +241,60 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
       mu[t].setName(name);
       model.add(mu[t]);
    }
+   
+   for(int t = 0; t < T; t++){
+      IloNumVar temp(env,0,IloInfinity,ILOFLOAT);
+      auxZ[t] = temp;
+      sprintf(name, "z_aux(%d)", t);
+      auxZ[t].setName(name);
+      model.add(auxZ[t]);
+   }
+   
+   //create the epsilon and aux variables for computing the
+   //discretisation errors
+   for(int t = 0; t < T; t++){
+      epsilon[t] = IloNumVarArray(env, stateSize); 
+      for(int s = 0; s < stateSize; s++){
+         epsilon[t][s] = IloNumVar(env, -IloInfinity, IloInfinity, ILOFLOAT);
+         sprintf(name, "_eps(%d,%d)", t, s);
+         epsilon[t][s].setName(name);
+         model.add(epsilon[t][s]);
+      }
+   }
 
    //create objective function
    IloExpr objFunction(env);
-   objFunction == 0;
-   objFunction += epsilon;
+   for(int t = 0; t < T; t++){
+      objFunction += auxZ[t];
+   }
    model.add(IloMinimize(env,objFunction));
+
+   //error bound constraints
+   //===============================================
+   for(int t = 0; t < T-1; t++){
+      for(int s = 0; s < stateSize; s++){
+         IloRange cons = (auxZ[t] - epsilon[t][s] >= 0);
+         sprintf(name,"auxZ_mod1_(%d,%d)",t,s);
+         cons.setName(name);
+         model.add(cons);
+      }
+   } 
+   for(int t = 0; t < T-1; t++){
+      for(int s = 0; s < stateSize; s++){
+         IloRange cons = (auxZ[t] + epsilon[t][s] >= 0);
+         sprintf(name,"auxZ_mod2_(%d,%d)",t,s);
+         cons.setName(name);
+         model.add(cons);
+      }
+   } 
+   for(int t = 0; t < T-1; t++){
+      for(int s = 0; s < stateSize; s++){
+         IloRange cons = (auxZ[t] <= 0.5*h*h*(normA*normyDotUb + normB*normuDotUb));
+         sprintf(name,"auxZ_mod2_(%d,%d)",t,s);
+         cons.setName(name);
+         model.add(cons);
+      }
+   } 
  
    //set of system dynamics constraints
    //===============================================
@@ -233,13 +311,14 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
          for(int j = 0; j < controlSize; j++){
             exp += h*leg.get_B(i,j)*Ut[j] - h*leg.get_B(i,j)*leg.get_Ueq(j);
          }
-         exp -= epsilon;
+         exp -= epsilon[t][i];
          IloRange cons = (exp <= 0);
          sprintf(name,"sys1(A%d,)_t%d",i,t);
          cons.setName(name);
          model.add(cons);
       }
    }   
+
    for(int t = 0; t < T-1; t++){
       vector <IloNumVar> Yt = {x[t],y[t],z[t],vel[t],gamma[t],phi[t]};
       vector <IloNumVar> Ytp1 = {x[t+1],y[t+1],z[t+1],vel[t+1],gamma[t+1],phi[t+1]};
@@ -253,7 +332,7 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
          for(int j = 0; j < controlSize; j++){
             exp += h*leg.get_B(i,j)*Ut[j] - h*leg.get_B(i,j)*leg.get_Ueq(j);
          }
-         exp += epsilon;
+         exp += epsilon[t][i];
          IloRange cons = (exp >= 0);
          sprintf(name,"sys2(A%d,)_t%d",i,t);
          cons.setName(name);
@@ -311,8 +390,8 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
    ////===============================================
    double c_eps = 0.001;
    for(int t = 0; t < T; t++){
-      double term1 = t/(double)T;
-      double term2 = (T-t)/(double)T;
+      double term1 = t/(double)(T-1);
+      double term2 = 1 - t/(double)(T-1);
       double glb_CL = term1*(Ueq[0] - c_eps) + term2*CLlb;
       double gub_CL = term1*(Ueq[0] + c_eps) + term2*CLub;
       CL[t].setBounds(glb_CL, gub_CL);
@@ -348,172 +427,3 @@ void CPLEXmodel::popSolMatrix(IloNumArray xt, IloNumArray yt, IloNumArray zt, Il
    }
 }
 
-
-   //double* vf = new double[3];
-
-   //double xf = solMatrix[T-1][0];
-   //double yf = solMatrix[T-1][1];
-   //double zf = solMatrix[T-1][2];
-   //double xi = solMatrix[T-2][0];
-   //double yi = solMatrix[T-2][1];
-   //double zi = solMatrix[T-2][2];
-   //vf[0] = (xf - xi)/h; 
-   //vf[1] = (yf - yi)/h; 
-   //vf[2] = (zf - zi)/h; 
-
-   //cout << "FINAL VEL VECTOR= [" << vf[0] << "," << vf[1] << "," << vf[2] << "]" << endl;
-   //getchar();
-
-
-
-
-
-
-   ////avoid gamma oscilation
-   //IloNumVarArray deltaGamma(env,T-1,-IloInfinity,IloInfinity,ILOFLOAT);   
-   //for(int t = 0; t < T-1; t++){
-      //sprintf(name,"dGamma(%d,%d)",t+1,t);
-      //deltaGamma[t].setName(name);
-   //}   
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaGamma[t] -gamma[t+1] + gamma[t] == 0);
-      //sprintf(name,"diff_Gamma(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaGamma[t]*deltaGamma[t] <= greekXi*greekXi);
-      //sprintf(name,"dlt_Gamma(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-   
-   ////avoid phi oscilation
-   //IloNumVarArray deltaPhi(env,T-1,-IloInfinity,IloInfinity,ILOFLOAT);   
-   //for(int t = 0; t < T-1; t++){
-      //sprintf(name,"dPhi(%d,%d)",t+1,t);
-      //deltaGamma[t].setName(name);
-   //}   
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaPhi[t] -phi[t+1] + phi[t] == 0);
-      //sprintf(name,"diff_Phi(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaPhi[t]*deltaPhi[t] <= greekXi*greekXi);
-      //sprintf(name,"dlt_Phi(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-
-   ////avoid V oscilation
-   //IloNumVarArray deltaV(env,T-1,-IloInfinity,IloInfinity,ILOFLOAT);   
-   //for(int t = 0; t < T-1; t++){
-      //sprintf(name,"dV(%d,%d)",t+1,t);
-      //deltaV[t].setName(name);
-   //}   
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaV[t] -vel[t+1] + vel[t] == 0);
-      //sprintf(name,"diff_V(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-   //for(int t = 0; t < T-1; t++){
-      //IloRange cons = (deltaV[t]*deltaV[t] <= greekXi*greekXi);
-      //sprintf(name,"dlt_V(%d)",t);
-      //cons.setName(name);
-      //model.add(cons);
-   //}
-   
-   //minimise distance from central axis of target
-   //add distance SOCP constraint
-   ////===============================================
-   //IloConstraint distance = (aux1*aux1 + aux2*aux2 + -fDist*fDist <= 0);
-   //sprintf(name,"final_distance");
-   //distance.setName(name);
-   //model.add(distance);
-   ////===============================================
-
-   ////===============================================
-   //stabilisation constraints
-   //first order smoothness conditions
-   //IloExpr p1Exp(env);
-   //for(int t = 0; t < T-1; t++){
-      //p1Exp += ((CL[t+1]-CL[t])*(CL[t+1]-CL[t]))/h;
-   //}
-   //IloRange p1 = (pi1 - p1Exp >= 0);
-   //sprintf(name, "pi1");
-   //p1.setName(name);
-   //model.add(p1);    
-
-   //IloExpr p2Exp(env);
-   //for(int t = 0; t < T-1; t++){
-      //p2Exp += ((mu[t+1]-mu[t])*(mu[t+1]-mu[t]))/h;
-   //}
-   //IloRange p2 = (pi2 - p2Exp >= 0);
-   //sprintf(name, "pi2");
-   //p2.setName(name);
-   //model.add(p2);
-
-   //IloExpr p3Exp(env);
-   //for(int t = 0; t < T-1; t++){
-      //p3Exp += ((phi[t+1]-phi[t])*(phi[t+1]-phi[t]))/h;
-   //}
-   //IloRange p3 = (pi3 - p3Exp >= 0);
-   //sprintf(name, "pi3");
-   //p3.setName(name);
- 
-   //model.add(p3);
-   //IloExpr p3Exp(env);
-   //for(int t = 0; t < T-1; t++){
-      //p3Exp += h*h*(((phi[t+1]+phi[t])/2)*((phi[t+1]+phi[t])/2));
-   //}
-   //IloRange p3 = (pi3 - p3Exp >= 0);
-   //sprintf(name, "pi3");
-   //p3.setName(name);
-   //model.add(p3);
-
-   //avoid CL oscilation
-/*
-   IloNumVarArray deltaCL(env,T-1,-IloInfinity,IloInfinity,ILOFLOAT);   
-   for(int t = 0; t < T-1; t++){
-      sprintf(name,"dCL(%d,%d)",t+1,t);
-      deltaCL[t].setName(name);
-   }   
-   for(int t = 0; t < T-1; t++){
-      IloRange cons = (deltaCL[t] -CL[t+1] + CL[t] == 0);
-      sprintf(name,"diff_CL(%d)",t);
-      cons.setName(name);
-      model.add(cons);
-   }
-   for(int t = 0; t < T-1; t++){
-      IloRange cons = (deltaCL[t]*deltaCL[t] <= greekXi*greekXi);
-      sprintf(name,"dlt_CL(%d)",t);
-      cons.setName(name);
-      model.add(cons);
-   }
-   
-   //avoid mu oscilation
-   IloNumVarArray deltaMu(env,T-1,-IloInfinity,IloInfinity,ILOFLOAT);   
-   for(int t = 0; t < T-1; t++){
-      sprintf(name,"dMu(%d,%d)",t+1,t);
-      deltaMu[t].setName(name);
-   }   
-   for(int t = 0; t < T-1; t++){
-      IloRange cons = (deltaMu[t] -mu[t+1] + mu[t] == 0);
-      sprintf(name,"diff_mu(%d)",t);
-      cons.setName(name);
-      model.add(cons);
-   }
-   for(int t = 0; t < T-1; t++){
-      IloRange cons = (deltaMu[t]*deltaMu[t] <= greekXi*greekXi);
-      sprintf(name,"dlt_mu(%d)",t);
-      cons.setName(name);
-      model.add(cons);
-   }
-*/
-   //end stabilisation constraints
-   //===============================================
-
-   //=============================================

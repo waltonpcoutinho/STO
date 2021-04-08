@@ -52,7 +52,7 @@ Unconstrained::minFlightTime(CPLEXmodel* modelPtr, Dynamics::dynamics leg, doubl
    preIter++;
    if(status == IloAlgorithm::Optimal){
       timeCnt += modelPtr->time;
-      fb = penal*tb + modelPtr->objVal;
+      fb = modelPtr->objVal;
       stepb = modelPtr->h;
       errorb = modelPtr->error;
    }
@@ -74,7 +74,7 @@ Unconstrained::minFlightTime(CPLEXmodel* modelPtr, Dynamics::dynamics leg, doubl
       preIter++;
       if(status == IloAlgorithm::Optimal){
          timeCnt += modelPtr->time;
-         fa = penal*ta + modelPtr->objVal;
+         fa = modelPtr->objVal;
          stepa = modelPtr->h;
          errora = modelPtr->error;
       }else{

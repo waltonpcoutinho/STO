@@ -75,31 +75,41 @@ int main(int argc, char** argv)
    int landingSpot = lowerLimit + (rand() % (upperLimit - lowerLimit + 1));
    drone.route.push_back(landingSpot);
 
-   //call STO-NLP
-   nlpPtr->setLocalSolver("ipopt");
-   double startSTONLP = wallTime();
-   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
-   sol->stoNlpTime = wallTime() - startSTONLP;
-   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   cout << "STO-NLP time(s) " << sol->stoNlpTime << endl;
-   sol->globalSol.push_back(drone);
-   
-   //call STO-NLP
-   nlpPtr->setLocalSolver("worhp_ampl");
-   double startSTONLP2 = wallTime();
-   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
-   sol->stoTime = wallTime() - startSTONLP2;
-   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   cout << "STO-NLP time(s) " << sol->stoTime << endl;
-   sol->globalSol.push_back(drone);
-   
    ////call STO-iterative
    //double startSTO = wallTime();
-   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO");
+   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, method);
    //sol->stoTime = wallTime() - startSTO;
    //cout << "STO ojb. val. = " << drone.routeCost << endl;
    //cout << "STO time(s) " << sol->stoTime << endl;
    //sol->globalSol.push_back(drone);
+   
+   //call STO-NLP
+   nlpPtr->setLocalSolver("ipopt");
+   double startSTONLP = wallTime();
+   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   sol->method1Time = wallTime() - startSTONLP;
+   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   cout << "STO-NLP time(s) " << sol->method1Time << endl;
+   sol->globalSol.push_back(drone);
+   
+   ////call STO-NLP
+   //nlpPtr->setLocalSolver("worhp_ampl");
+   //double startSTONLP2 = wallTime();
+   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, method);
+   //sol->stoTime = wallTime() - startSTONLP2;
+   //cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   //cout << "STO-NLP time(s) " << sol->stoTime << endl;
+   //sol->globalSol.push_back(drone);
+   
+   //call STO + STO-NLP
+   nlpPtr->setLocalSolver("ipopt");
+   double startSTONLP2 = wallTime();
+   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO+STO-NLP");
+   sol->method2Time = wallTime() - startSTONLP2;
+   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   cout << "STO-NLP time(s) " << sol->method2Time << endl;
+   sol->globalSol.push_back(drone);
+   
    
    double routeLb = getRoutelb(drone, gliderPtr);
    cout << "\n\n Lower bound on the flight time = " << routeLb << endl;
@@ -146,6 +156,18 @@ void callTrajOpt(glider& drone, Data* data, Dynamics* dyn, CPLEXmodel* model, AM
       drone.stepSizes[j] = 0;
       drone.errors[j] = 0;
    }
+   drone.normEpsilons = new double* [rSize -1];
+   for(int j = 0; j < rSize - 1; j++){
+      drone.normEpsilons[j] = new double[T];
+   }
+   drone.normTaylor1st = new double* [rSize -1];
+   for(int j = 0; j < rSize - 1; j++){
+      drone.normTaylor1st[j] = new double[T];
+   }
+   drone.relEpsilons = new double* [rSize -1];
+   for(int j = 0; j < rSize - 1; j++){
+      drone.relEpsilons[j] = new double[T];
+   }
    
    //Initialise solution array
    drone.trajectory.resize((rSize - 1)*T,vector<double>(stateSize + controlSize));
@@ -153,7 +175,8 @@ void callTrajOpt(glider& drone, Data* data, Dynamics* dyn, CPLEXmodel* model, AM
    //Optimise trajectory for the given route
    status = trajectory->findTraj(drone.route, drone.route.size(),
          drone.trajectory, drone.flightTimes,
-         drone.stepSizes, drone.errors, drone.infOrig);
+         drone.stepSizes, drone.errors, drone.infOrig, 
+         drone.normEpsilons, drone.normTaylor1st, drone.relEpsilons);
 
    //Save solution info
    if(status == IloAlgorithm::Optimal){

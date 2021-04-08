@@ -30,6 +30,7 @@ class Data{
       int noLandPoints;
       string fileName;
       string instType;
+      string method;
       //instance data
       double* depot;
       double* xBar;

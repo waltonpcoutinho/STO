@@ -50,7 +50,8 @@ class CPLEXmodel{
       IloNumVarArray phi;
       IloNumVarArray CL;
       IloNumVarArray mu;
-      IloNumVar epsilon;
+      IloArray<IloNumVarArray> epsilon;
+      IloNumVarArray auxZ;
       
       //arrays to store solution
       IloNumArray xt;
@@ -61,6 +62,7 @@ class CPLEXmodel{
       IloNumArray phit;
       IloNumArray CLt;
       IloNumArray mut;
+      IloArray<IloNumArray> epst;
 
       //problem dimensions
       int T;
@@ -70,6 +72,7 @@ class CPLEXmodel{
 
       void createModel(IloModel, const Dynamics::dynamics leg, double, double);
       void finishCplex();
+      double errorNorm(IloArray<IloNumArray>);
       void popSolMatrix(IloNumArray, IloNumArray, IloNumArray, IloNumArray, 
                         IloNumArray, IloNumArray, IloNumArray, IloNumArray);
 

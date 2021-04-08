@@ -142,4 +142,3 @@ auxEpsBounds{t in Time}: z[t] <= 0.5*h^2*overall_norm;
 
 
 
-

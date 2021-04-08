@@ -3,14 +3,14 @@
 Data::Data(int argc, char** argv)
 {
    //load input 
-   if(argc < 5){
+   if(argc < 6){
       cerr << "Not enough input arguments! " << endl;
-      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE]" << endl;
+      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE] [METHOD]" << endl;
       exit(1);
    }
-   if(argc > 5){//
+   if(argc > 6){//
       cerr << "Too many input arguments! " << endl;
-      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE]" << endl;
+      cerr << "Calling sequence: ./exeGTO [INSTANCE PATH] [NUMBER OF STEPS] [MAX FLEET SIZE] [INSTANCE TYPE] [METHOD]" << endl;
       exit(1);
    }
    //extract instance name from file   
@@ -25,6 +25,9 @@ Data::Data(int argc, char** argv)
 
    //get instance type
    instType = argv[4];
+   
+   //get trajectory opt. method
+   method = argv[5];
 
    //read instance
    ifstream readInst(instPath, ios::in);

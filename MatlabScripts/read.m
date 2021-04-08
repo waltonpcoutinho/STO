@@ -104,6 +104,36 @@ function [trajData, minX, minY] = readTrajData(name)
         end
     end
     
+    %read max norm of epsilon for each time step of each arc of the route
+    rubbish = fgetl(fileID); %discard the header
+    for i = 1: nGliders
+        for arc = 1: routeSizes(i) - 1
+            line = fgetl(fileID);
+            maxNormEps_t(arc,:) = str2num(line);
+        end
+        gliders(i).maxNormEps = maxNormEps_t;
+    end
+    
+    %read max norm of Taylor's 1st term per time step and arc of the route
+    rubbish = fgetl(fileID); %discard the header
+    for i = 1: nGliders
+        for arc = 1: routeSizes(i) - 1
+            line = fgetl(fileID);
+            maxNormTaylor_t(arc,:) = str2num(line);
+        end
+        gliders(i).maxNormTaylor = maxNormTaylor_t;
+    end
+    
+    %read realtive errors for each time step and arc of the route
+    rubbish = fgetl(fileID); %discard the header
+    for i = 1: nGliders
+        for arc = 1: routeSizes(i) - 1
+            line = fgetl(fileID);
+            relError_t(arc,:) = str2num(line);
+        end
+        gliders(i).relError = relError_t;
+    end
+    
     trajData = struct('instName',instance,'type',type,'nTimeSteps',nTimeSteps,'nGliders',nGliders,...
                       'routeSizes',routeSizes,'gliders',gliders);
 	fclose(fileID);

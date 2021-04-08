@@ -5,8 +5,8 @@ Solution::Solution()
    //set version
    makespan = true;
    //set timers
-   stoTime = 0;
-   stoNlpTime = 0;
+   method1Time = 0;
+   method2Time = 0;
 }
 
 Solution::~Solution()

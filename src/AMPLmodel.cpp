@@ -17,6 +17,29 @@ AMPLmodel::AMPLmodel(Data* data, Dynamics* glider, int T)
          solMatrix[t][j] = 0.0;
       }
    }
+   //allocate memory for the error Matrix
+   errorMatrix = new double* [dscrtSize];
+   for(int t = 0; t < dscrtSize; t++){
+      errorMatrix[t] = new double [state];
+   }
+   for(int t = 0; t < dscrtSize; t++){
+      for(int j = 0; j < state; j++){
+         errorMatrix[t][j] = 0.0;
+      }
+   }
+
+   normErrors = new double [dscrtSize];
+   for(int t = 0; t < dscrtSize; t++){
+      normErrors[t] = 0.0;
+   }
+   normTaylor1st = new double [dscrtSize];
+   for(int t = 0; t < dscrtSize; t++){
+      normTaylor1st[t] = 0.0;
+   }
+   relativeErrors = new double [dscrtSize];
+   for(int t = 0; t < dscrtSize; t++){
+      relativeErrors[t] = 0.0;
+   }
 
    //default local solver
    localSolver = "worhp_ampl";
@@ -33,40 +56,166 @@ void AMPLmodel::setLocalSolver(string solver)
 
 double AMPLmodel::errorNorm(ampl::AMPL* ampl)
 {
-   double sum = 0;
+   double max = 0;
    
    int state = gliderPtr->stateSize;
    int ctrl = gliderPtr->controlSize;
 
-   double** errorMatrix;
-   errorMatrix = new double* [dscrtSize];
-   for(int t = 0; t < dscrtSize; t++){
-      errorMatrix[t] = new double [state];
-   }
-
    // Get the values of the error variables
    ampl::DataFrame errors = ampl->getVariable("epsilon").getValues();
-   int rowIdx = 0;
+
+   //Print errors as string
+   //cout << errors.toString() << endl;
+   //cout << ampl->getOutput("display epsilon;");
+   
    for(int t = 0; t < errors.getNumRows(); t++){
-      ampl::DataFrame::Row row = errors.getRowByIndex(t); 
-      int col = row[1].dbl() - 1; //AMPL cols start by 1
-      errorMatrix[rowIdx][col] = row[2].dbl();
-      if(col == 5){
-         rowIdx++;
+      int row = errors.getRowByIndex(t)[0].dbl();
+      int col = errors.getRowByIndex(t)[1].dbl() - 1; //AMPL cols start at 1
+      double val = errors.getRowByIndex(t)[2].dbl();
+      errorMatrix[row][col] = val;
+      if(val > max){
+         max = val;
       }
    }
 
+   cout << "Error norm = " << max << endl;
+
+   return max;
+}
+
+double vectorMaxNorm(vector<double> vec)
+{
+   double max = 0;
+   for(int i = 0; i < vec.size(); i++){
+      if(abs(vec[i]) > max){
+         max = abs(vec[i]);
+      }
+   }
+   return max;
+}
+
+vector<double> vectorMatrixMultiplication(vector<vector<double>> matrix, vector<double> vec)
+{
+   int numRows = matrix.size();
+   int numCols = matrix[0].size();
+
+   vector<double> result(numRows, 0);
+
+   if(numCols != vec.size()){
+      cerr << "The size of arrays do not match for multiplication!" << endl;
+      cerr << "FUNCTION vectorMatrixMultiplication (AMPLmodel.cpp)" << endl;
+      exit(1);
+   }
+
+   for(int i = 0; i < numRows; i++){
+      double rowSum = 0;
+      for(int j = 0; j < numCols; j++){
+         rowSum += matrix[i][j]*vec[j];
+      }
+      result[i] = rowSum;
+   }
+
+   return result;
+}
+
+vector<double> subtractVectors(vector<double> vec1, vector<double> vec2)
+{
+   vector<double> res(vec1.size(), 0);
+   
+   if(vec1.size() != vec2.size()){
+      cerr << "It's not possible to subtract these two vectors" << endl;
+      cerr << "FUNCTION subtractVectors (AMPLmodel.cpp)" << endl;
+      exit(1);
+   }
+   
+   transform (vec1.begin(), vec1.end(), vec2.begin(), 
+                          res.begin(), std::minus<double>());
+
+   return res;
+}
+
+double* AMPLmodel::computeRelativeError(Dynamics::dynamics arc)
+{
+   double* relErrors;
+   relErrors = new double [dscrtSize];
    for(int t = 0; t < dscrtSize; t++){
-      double sumSquare = 0;
-      for(int i = 0; i < state; i++){
-         sumSquare += errorMatrix[t][i]*errorMatrix[t][i];
-      }
-      sum += sqrt(sumSquare);
+      relErrors[t] = 0.0;
    }
 
-   cout << "Error norm = " << sum << endl;
+   int state = gliderPtr->stateSize;
+   int ctrl = gliderPtr->controlSize;
 
-   return sum;
+   //initial and final conditions
+   double const* Yo = arc.Yo;
+   double const* Uo = arc.Uo;
+   
+   //set up equilibrium conditions
+   vector<double> Yeq {Yo[0],Yo[1],Yo[2],
+                       arc.get_Yeq(3),arc.get_Yeq(4),arc.get_Yeq(5)};   
+   vector<double> Ueq {arc.get_Ueq(0),arc.get_Ueq(1)};
+   
+   //set up state and control matrices
+   vector<vector<double>> A(state, vector<double>(state, 0));
+   vector<vector<double>> B(state, vector<double>(ctrl, 0));
+
+   for(int i = 0; i < state; i++){
+      for(int j = 0; j < state; j++){
+         A[i][j] = arc.get_A(i,j);
+      }
+   }
+
+   for(int i = 0; i < state; i++){
+      for(int j = 0; j < ctrl; j++){
+         B[i][j] = arc.get_B(i,j);
+      }
+   }
+
+   //compute the relative error (of the first term of Taylor's expansion
+   //relative to the magnitude of the error variable)
+   for(int t = 0; t < dscrtSize; t++)
+   {
+      //declaring auxiliary variables for state, control and error values
+      vector<double> y_t(state, 0);
+      vector<double> u_t(ctrl, 0);
+      vector<double> epsilon_t(state, 0);
+
+      for(int s = 0; s < state; s++){
+         y_t[s] = solMatrix[t][s];
+      }      
+      for(int c = 0; c < ctrl; c++){
+         u_t[c] = solMatrix[t][c + 6];
+      }
+      for(int s = 0; s < state; s++){
+         epsilon_t[s] = errorMatrix[t][s];
+      }
+
+      //computing y_t - y_eq
+      vector<double> y_diff = subtractVectors(y_t, Yeq);
+      vector<double> u_diff = subtractVectors(u_t, Ueq);
+
+      //computing first term of Taylor's expansion
+      vector<double> taylor1st_t(state, 0);
+      vector<double> AtimesY = vectorMatrixMultiplication(A, y_diff);
+      vector<double> BtimesU = vectorMatrixMultiplication(B, u_diff);
+
+      for(int s = 0; s < state; s++){
+        taylor1st_t[s] = AtimesY[s] + BtimesU[s];
+      }
+
+      //get the norms of numerator and denominator
+      normErrors[t] = vectorMaxNorm(epsilon_t);
+      normTaylor1st[t] = vectorMaxNorm(taylor1st_t);
+
+      //compute relative errors
+      if(normTaylor1st[t] > 1e-3){
+         relErrors[t] = abs(1 - normErrors[t]/normTaylor1st[t]);
+      }else{
+         relErrors[t] = abs(normErrors[t]);
+      }
+
+   }
+
+   return relErrors;
 }
 
 int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step, double& error)
@@ -234,6 +383,11 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    AMPLtflb.set(arc.deltaTa);
    
    /*
+    * Set initial guesses
+    */
+   setInitialGuess(&ampl);
+   
+   /*
     * end of setting the values of the parameters
     */
 
@@ -259,7 +413,6 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
 
    // Solve
    ampl.solve();
-
    //Display solver's message
    ampl.eval("display solve_message;");
    string message = output.getStatus();
@@ -283,6 +436,7 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       //Get solution value
       //error = ampl.getValue("epsilon").dbl();
       error = errorNorm(&ampl);
+
       flightTime = ampl.getValue("tf").dbl();
       step = ampl.getValue("h").dbl();
 
@@ -311,7 +465,12 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
          if(col == 7){
             rowIdx++;
          }
-      } 
+      }
+
+      //compute the quality of solutions as the relative error
+      //between epsilon and 1st term of Taylor's expansion
+      relativeErrors = computeRelativeError(arc);
+
    }else{
       cout << "Failed to solve NLP!" << endl;
    }
@@ -321,4 +480,38 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    ampl.close();
 
    return status;
+}
+   
+void AMPLmodel::setInitialGuess(ampl::AMPL* ampl)
+{
+   int stateSize = gliderPtr->stateSize;
+   int ctrlSize = gliderPtr->controlSize;
+
+   // Set up dataframes and copy STO solutions
+   ampl::DataFrame state = ampl->getVariable("Y").getValues();
+   int counter = 0;
+   for(int t = 0; t < dscrtSize; t++){
+      for(int s = 0; s < stateSize; s++){
+         // skip initial configuration
+         if(t > 0){
+            state.setValue(counter, 2, solMatrix[t][s]);
+         }
+         counter += 1;
+      }
+   }
+   
+   ampl::DataFrame control = ampl->getVariable("U").getValues();
+   counter = 0;
+   for(int t = 0; t < dscrtSize; t++){
+      for(int c = 0; c < ctrlSize; c++){
+         // skip initial configuration
+         if(t > 0){
+            control.setValue(counter, 2, solMatrix[t][6+c]);
+         }
+         counter += 1;
+      }
+   }
+
+   ampl->getVariable("Y").setValues(state);
+   ampl->getVariable("U").setValues(control);
 }

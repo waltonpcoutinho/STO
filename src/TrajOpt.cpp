@@ -3,9 +3,9 @@
 TrajOpt::TrajOpt(Data* dataPtr, Dynamics* gliderPtr, CPLEXmodel* modelPtr, AMPLmodel* nlpPtr, string usrMethod)
 :dynPtr(gliderPtr), data(dataPtr), model(modelPtr), nlp(nlpPtr), method(usrMethod) 
 {
-   if(method != "STO" and method != "STO-NLP"){
-      cout << method <<" is invalid option!" << endl;
-      cout << "Possible options are 'STO' or 'STO-NLP'" << endl;
+   if(method != "STO" and method != "STO-NLP" and method != "STO+STO-NLP"){
+      cout << method <<" is an invalid option!" << endl;
+      cout << "Possible options are 'STO', 'STO-NLP' or STO+STO-NLP" << endl;
       exit(0);
    }
 
@@ -15,6 +15,9 @@ TrajOpt::TrajOpt(Data* dataPtr, Dynamics* gliderPtr, CPLEXmodel* modelPtr, AMPLm
    if(method == "STO-NLP"){
       cout << "\n\nRunning STO-NLP!" << endl;
    }
+   if(method == "STO+STO-NLP"){
+      cout << "\n\nRunning STO + STO-NLP!" << endl;
+   }
 }
 
 // destrutor
@@ -22,7 +25,8 @@ TrajOpt::~TrajOpt()
 {
 }
 
-IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<vector<double>>& solution, double* flightTimes, double* stepSizes, double* errors, int& infsblArc)
+IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<vector<double>>& solution, double* flightTimes, double* stepSizes, double* errors, int& infsblArc, double** normEpsilons, 
+double** normTaylor1st, double** relEpsilons)
 {
    //##################################################
    //check route feasibility and compute optimal trajectories
@@ -89,6 +93,52 @@ IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<v
          status = IloAlgorithm::Infeasible;
 
          if(method == "STO"){
+            /*
+             * START STO
+             */
+            //run the unconstrained optimization
+            Unconstrained* uncOpt = new Unconstrained();
+            double tfLb = leg.deltaTa;
+            double tfUb = leg.deltaTb;
+            double tfGuess = (tfUb + tfLb)/2;
+            double deltaT = tfUb - tfLb;
+
+            //check Ub for tf against maxtb
+            if(!(tfUb < maxtb)){
+               cout << "tfUb= " << tfUb << " , maxtb= " << maxtb << endl;
+               cout << "maxtb too small?" << endl;               
+            }
+
+            //compute optimal trajectory between waypoint k and k+1
+            while(status != IloAlgorithm::Optimal && tfUb < maxtb){
+               //call optimiser
+               status = uncOpt->minFlightTime(model,leg,tfLb,tfUb,tOpt,stepOpt,errorOpt);
+               //shift time interval if status != optimal
+               if(status != IloAlgorithm::Optimal){
+                  tfLb += deltaT;
+                  tfUb += deltaT;
+               }
+            }
+            /*
+             * FINISH STO
+             */
+         }else if(method == "STO-NLP"){
+            /*
+             * START STO-NLP
+             */
+            //call NLP solver
+            int statusNLP = nlp->solveNLP(leg, tOpt, stepOpt, errorOpt);
+
+            if(statusNLP == 1){
+               status = IloAlgorithm::Optimal;
+            }
+            /*
+             * FINISH STO-NLP
+             */
+         }else if(method == "STO+STO-NLP"){
+            /*
+             * START STO+STO-NLP
+             */
             //run the unconstrained optimization
             Unconstrained* uncOpt = new Unconstrained();
             double tfLb = leg.deltaTa;
@@ -106,17 +156,25 @@ IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<v
             //compute optimal trajectory between waypoint k and k+1
             while(status != IloAlgorithm::Optimal && tfUb < maxtb){
                //call optimiser
-               //uncOpt->callCMAES(model,leg,tfGuess,tOpt);
-               //status = uncOpt->bisection(model,leg,tfLb,tfUb,tOpt,stepOpt,errorOpt);
                status = uncOpt->minFlightTime(model,leg,tfLb,tfUb,tOpt,stepOpt,errorOpt);
                //shift time interval if status != optimal
                if(status != IloAlgorithm::Optimal){
                   tfLb += deltaT;
                   tfUb += deltaT;
                }
+            /*
+             * FINISH STO+STO-NLP
+             */
             }
-         }else if(method == "STO-NLP"){
-            //calln NLP solver
+
+            //set up STO solution as initial guess for STO-NLP
+            for(int ii = 0; ii < T; ii++){
+               for(int jj = 0; jj < stateSize + controlSize; jj++){
+                  nlp->solMatrix[ii][jj] = model->solMatrix[ii][jj];
+               }
+            }
+            
+            //call NLP solver
             int statusNLP = nlp->solveNLP(leg, tOpt, stepOpt, errorOpt);
 
             if(statusNLP == 1){
@@ -135,7 +193,7 @@ IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<v
                   counter++;
                }
             }
-            if(method == "STO-NLP"){
+            if(method == "STO-NLP" or method == "STO+STO-NLP"){
                for(int ii = 0; ii < T; ii++){
                   for(int jj = 0; jj < stateSize + controlSize; jj++){
                      solution[counter][jj] = nlp->solMatrix[ii][jj];
@@ -153,6 +211,12 @@ IloAlgorithm::Status TrajOpt::findTraj(vector<int>& route, int seqSize, vector<v
          flightTimes[k] = tOpt;
          stepSizes[k] = stepOpt;
          errors[k] = errorOpt;
+         
+         for(int t = 0; t < T; t++){
+            normEpsilons[k][t] = nlp->normErrors[t];
+            normTaylor1st[k][t] = nlp->normTaylor1st[t];
+            relEpsilons[k][t] = nlp->relativeErrors[t];
+         }
 
          //update initial conditions for next leg
          Ybar[0] = solution[counter-1][0];

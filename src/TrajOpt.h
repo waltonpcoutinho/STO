@@ -29,7 +29,9 @@ class TrajOpt{
       TrajOpt(Data*, Dynamics*, CPLEXmodel*, AMPLmodel*, string);
       ~TrajOpt();
        //IloAlgorithm::Status findTraj(int*, int, vector<vector<double>>&, double*, double*, double*);
-       IloAlgorithm::Status findTraj(vector<int>&, int, vector<vector<double>>&, double*, double*, double*, int&);
+       IloAlgorithm::Status findTraj(vector<int>&, int,
+             vector<vector<double>>&, double*, double*, double*, 
+             int&, double**, double**, double**);
 
    private:
       Dynamics* dynPtr;

@@ -21,9 +21,12 @@ struct glider{
    vector<int> route;
    double* flightTimes;
    double* stepSizes;
-   double* errors;
-   vector<vector<double>> trajectory;
+   double* errors; //errors per arc
    vector<int> collisionList;
+   vector<vector<double>> trajectory;
+   double** normEpsilons; //errors per time step for all arcs
+   double** normTaylor1st; //first term of Taylor's approx.
+   double** relEpsilons; //relative errors per time step and arcs
 };
 
 class Solution {
@@ -48,8 +51,8 @@ class Solution {
    double getTotalCost(vector<glider>&);
 
    //total number of LS iterations
-   double stoTime;
-   double stoNlpTime;
+   double method1Time;
+   double method2Time;
    
    //return version
    bool isMakespan();

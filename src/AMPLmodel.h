@@ -17,6 +17,10 @@ class AMPLmodel{
       ~AMPLmodel();     
 
       double** solMatrix;
+      double** errorMatrix;
+      double* normErrors;
+      double* normTaylor1st;
+      double* relativeErrors;
       int dscrtSize;
 
       int solveNLP(Dynamics::dynamics, double&, double&, double&);
@@ -29,6 +33,8 @@ class AMPLmodel{
       string localSolver;
 
       double errorNorm(ampl::AMPL* ampl);
+      void setInitialGuess(ampl::AMPL* ampl);
+      double* computeRelativeError(Dynamics::dynamics);
 
 };
 

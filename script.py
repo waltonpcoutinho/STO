@@ -14,6 +14,7 @@ myPath = "../Python/InstanceGenerator/" + instanceType + "/"
 #myPath = "../GRTOP_instances/" + instanceType + "/"
 allFiles = [ f for f in listdir(myPath) if isfile(join(myPath,f)) ]
 allFiles.sort()
+
 for instance in allFiles:
    instanceName = instance.split(".")[0]
    noWaypoints = int(instanceName[7:9])

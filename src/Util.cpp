@@ -4,7 +4,7 @@ void setSeed()
 {
    // initialise random seed
    int seed = time(NULL);
-   //seed = 1597872563;
+   //seed = 1613090975;
    srand(seed);
    cout << "\n\nRandom seed: " << seed << endl;
 }
@@ -178,8 +178,8 @@ void writeRes2File(Data const* dataPtr, double lb, Solution const* sol, string i
    double stoNlpStep = routeAvgStep(sol->globalSol[0]);
    double stoStep = routeAvgStep(sol->globalSol[1]);
 
-   double stoNlpTime = sol->stoNlpTime;
-   double stoTime = sol->stoTime;
+   double method1Time = sol->method1Time;
+   double method2Time = sol->method2Time;
 
    //write results to file
    string resultsPath = "Results/compResults_" + instType + ".out";
@@ -192,8 +192,8 @@ void writeRes2File(Data const* dataPtr, double lb, Solution const* sol, string i
             << stoError << " " 
             << stoNlpStep << " " 
             << stoStep << " " 
-            << stoNlpTime << " "
-            << stoTime << endl;
+            << method1Time << " "
+            << method2Time << endl;
    writeRes.close();
 }
 
@@ -294,6 +294,39 @@ void writeSol2File(Data const* data,vector<glider> gliders)
          int nCols =  gliders[i].trajectory[j].size();
          for(int k = 0; k < nCols; k++){
             writeSol << gliders[i].trajectory[j][k] << " ";
+         }
+         writeSol << endl;
+      }
+   }
+   //print the max norm of epsilon for each route and time step
+   writeSol << "max norm of epsilon" << endl;
+   for(int i = 0; i < gliders.size(); i++){
+      int routeSize = gliders[i].route.size();
+      for(int j = 0; j < routeSize - 1; j++){
+         for(int t = 0; t < data->T; t++){
+            writeSol << gliders[i].normEpsilons[j][t] << " ";
+         }
+         writeSol << endl;
+      }
+   }
+   //print maxnorm of 1st term of Taylor approx for each route and time step
+   writeSol << "max norm of 1st Taylor term" << endl;
+   for(int i = 0; i < gliders.size(); i++){
+      int routeSize = gliders[i].route.size();
+      for(int j = 0; j < routeSize - 1; j++){
+         for(int t = 0; t < data->T; t++){
+            writeSol << gliders[i].normTaylor1st[j][t] << " ";
+         }
+         writeSol << endl;
+      }
+   }
+   //print the relative errors for each route and time step
+   writeSol << "relative errors" << endl;
+   for(int i = 0; i < gliders.size(); i++){
+      int routeSize = gliders[i].route.size();
+      for(int j = 0; j < routeSize - 1; j++){
+         for(int t = 0; t < data->T; t++){
+            writeSol << gliders[i].relEpsilons[j][t] << " ";
          }
          writeSol << endl;
       }
