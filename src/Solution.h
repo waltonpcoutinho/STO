@@ -51,8 +51,7 @@ class Solution {
    double getTotalCost(vector<glider>&);
 
    //total number of LS iterations
-   double method1Time;
-   double method2Time;
+   vector<double> computingTime;
    
    //return version
    bool isMakespan();

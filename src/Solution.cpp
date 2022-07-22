@@ -4,9 +4,6 @@ Solution::Solution()
 {
    //set version
    makespan = true;
-   //set timers
-   method1Time = 0;
-   method2Time = 0;
 }
 
 Solution::~Solution()

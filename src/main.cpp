@@ -75,41 +75,52 @@ int main(int argc, char** argv)
    int landingSpot = lowerLimit + (rand() % (upperLimit - lowerLimit + 1));
    drone.route.push_back(landingSpot);
 
-   ////call STO-iterative
-   //double startSTO = wallTime();
-   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, method);
-   //sol->stoTime = wallTime() - startSTO;
-   //cout << "STO ojb. val. = " << drone.routeCost << endl;
-   //cout << "STO time(s) " << sol->stoTime << endl;
-   //sol->globalSol.push_back(drone);
+   //initialise computing time variables
+   double startingTime = 0;
+
+   //call STO-iterative
+   startingTime = wallTime();
+   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO");
+   sol->computingTime.push_back(wallTime() - startingTime);
+   cout << "STO ojb. val. = " << drone.routeCost << endl;
+   cout << "STO time(s) " << sol->computingTime.back() << endl;
+   sol->globalSol.push_back(drone);
    
    //call STO-NLP
    nlpPtr->setLocalSolver("ipopt");
-   double startSTONLP = wallTime();
+   startingTime = wallTime();
    callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
-   sol->method1Time = wallTime() - startSTONLP;
+   sol->computingTime.push_back(wallTime() - startingTime);
    cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   cout << "STO-NLP time(s) " << sol->method1Time << endl;
+   cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
    sol->globalSol.push_back(drone);
-   
-   ////call STO-NLP
-   //nlpPtr->setLocalSolver("worhp_ampl");
-   //double startSTONLP2 = wallTime();
-   //callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, method);
-   //sol->stoTime = wallTime() - startSTONLP2;
-   //cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   //cout << "STO-NLP time(s) " << sol->stoTime << endl;
-   //sol->globalSol.push_back(drone);
-   
-   //call STO + STO-NLP
-   nlpPtr->setLocalSolver("ipopt");
-   double startSTONLP2 = wallTime();
-   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO+STO-NLP");
-   sol->method2Time = wallTime() - startSTONLP2;
+
+   //call STO-NLP
+   nlpPtr->setLocalSolver("octeract-engine");
+   startingTime = wallTime();
+   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   sol->computingTime.push_back(wallTime() - startingTime);
    cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   cout << "STO-NLP time(s) " << sol->method2Time << endl;
+   cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
    sol->globalSol.push_back(drone);
-   
+
+   // //call STO-NLP
+   // nlpPtr->setLocalSolver("bonmin");
+   // startingTime = wallTime();
+   // callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   // sol->computingTime.push_back(wallTime() - startingTime);
+   // cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   // cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
+   // sol->globalSol.push_back(drone);
+
+   // //call STO-NLP
+   // nlpPtr->setLocalSolver("lgo");
+   // startingTime = wallTime();
+   // callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   // sol->computingTime.push_back(wallTime() - startingTime);
+   // cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   // cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
+   // sol->globalSol.push_back(drone);
    
    double routeLb = getRoutelb(drone, gliderPtr);
    cout << "\n\n Lower bound on the flight time = " << routeLb << endl;
@@ -190,6 +201,7 @@ void callTrajOpt(glider& drone, Data* data, Dynamics* dyn, CPLEXmodel* model, AM
       }     
    }else{
       cout << "Failed to find feasible trajectory." << endl;
+      drone.routeCost = DBL_MAX;
    }
 
 }

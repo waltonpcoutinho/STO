@@ -21,7 +21,7 @@ reset;
 #-------------------------------------"DEFINE PARAMETERS"--------------------------------------#
 #----------------------------------------------------------------------------------------------#
 param N;
-param xi = 0.001;
+param delta = 1e-3;
 
 #"define time related constants"
 set Time := {0..N-1} ordered;
@@ -104,11 +104,8 @@ minimize objective: tf + sum{t in Time} z[t];
 subject to
 
 #"dynamic Euler constraints"
-EOMs1{t in 0..(N-2), s in States}:
-Y[t+1,s] >= Y[t,s] + h*(sum{j in States} A[s,j]*(Y[t,j] - Yeq[j])
-                   + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) - epsilon[t,s];
-EOMs2{t in 0..(N-2), s in States}:
-Y[t+1,s] <= Y[t,s] + h*(sum{j in States} A[s,j]*(Y[t,j] - Yeq[j])
+EOMs{t in 0..(N-2), s in States}:
+Y[t+1,s] = Y[t,s] + h*(sum{j in States} A[s,j]*(Y[t,j] - Yeq[j])
                    + sum{k in Controls}  B[s,k]*(U[t,k] - Ueq[k])) + epsilon[t,s];
 
 #"initial states"
@@ -123,21 +120,29 @@ boundsY{t in Time, s in States}:     Ylb[s] <= Y[t,s] <= Yub[s];
 #"bounds on control variables"
 boundsC{t in Time, c in Controls}:   Ulb[c] <= U[t,c] <= Uub[c];
 
-#"stabilisation constraints"
-perturbation1{t in Time, c in Controls}: 
-    U[t,c] >= (t/(N-1))*(Ueq[c] - xi) + Ulb[c]*(((N-1)-t)/(N-1));
-perturbation2{t in Time, c in Controls}: 
-    U[t,c] <= (t/(N-1))*(Ueq[c] + xi) + Uub[c]*(((N-1)-t)/(N-1));
-
-#"lower bound on the flight time"
-tf_lower_bound: tf >= tflb;
-
 #"constraints on the norm of epsilon"
 normEps1{t in Time, s in States}: z[t] >=   epsilon[t,s];
 normEps2{t in Time, s in States}: z[t] >= - epsilon[t,s];
 
 #"upper bound on the local truncation errors"
-auxEpsBounds{t in Time}: z[t] <= 0.5*h^2*overall_norm;
+auxEpsBounds{t in Time}: z[t] <= 0.5*(h^2)*overall_norm;
+
+#"lower bound on the flight time"
+tf_lower_bound: tf >= tflb;
+
+#visiting and landing constraints
+#in separate files
+
+#"stabilisation constraints"
+perturbation1{t in Time, c in Controls}: 
+    U[t,c] >= (t/(N-1))*(Ueq[c] - delta) + Ulb[c]*(1 - (t/(N-1)));
+perturbation2{t in Time, c in Controls}: 
+    U[t,c] <= (t/(N-1))*(Ueq[c] + delta) + Uub[c]*(1 - (t/(N-1)));
+
+#perturbation{t in 1..N-1, c in Controls}: 
+#   Ueq[c] - delta <= U[t,c] <= Ueq[c] + delta; 
+
+
 
 
 

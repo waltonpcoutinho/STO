@@ -42,7 +42,7 @@ AMPLmodel::AMPLmodel(Data* data, Dynamics* glider, int T)
    }
 
    //default local solver
-   localSolver = "worhp_ampl";
+   localSolver = "ipopt";
 }	
 
 AMPLmodel::~AMPLmodel()
@@ -391,9 +391,9 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
     * end of setting the values of the parameters
     */
 
-   //export model
-   ampl.eval("expand >Results/NLPmodel.lp;");
-   ampl.eval("write bResults/NLPmodel;");
+   // //export model
+   // ampl.eval("expand >Results/NLPmodel.lp;");
+   // ampl.eval("write bResults/NLPmodel;");
    
    /*
     * Call optmimiser
@@ -402,36 +402,50 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
    // Set the output handler to accumulate the output messages
    MyOutputHandler output;
    ampl.setOutputHandler(&output);
-   
-   //set solver
-   if(localSolver == "worhp_ampl"){
-      ampl.setOption("solver", "worhp_ampl");
-   }else if(localSolver == "ipopt"){
-      ampl.setOption("solver", "ipopt");
-      //ampl.setOption("ipopt_options", "iprint=1");
+
+   ampl.setOption("solver", localSolver);
+
+   //set options
+   if(localSolver == "baron"){
+      ampl.setOption("baron_options", "maxtime=60 lsolmsg outlev=1 threads=1b");
+   }
+   if(localSolver == "octeract-engine"){
+      cout << "Setting up octeract-engine options in octeract.opt" << endl;
+   }
+   if(localSolver == "couenne"){
+      cout << "Setting up couenne options in couenne.opt" << endl;
+   }
+   if(localSolver == "worhp"){
+      ampl.setOption("worhp_options", "InitialLMest=1");
+   }
+   if(localSolver == "lgo"){
+      ampl.setOption("lgo_options", "timelim=60");
    }
 
    // Solve
-   ampl.solve();
+   //cout << "Solving prob. using " << ampl.getOption("solver") << endl;
+   bool ampl_success = false;
+   try{
+      ampl.solve();
+      ampl_success = true;
+   }catch(ampl::AMPLException &err){
+      cout << "AMPL exception caught: " << err.what() << endl;
+      ampl_success = false;
+   }
+
+   if(auto msg = ampl.getOption("solver")){
+      cout << msg.value() << endl;
+   }
    //Display solver's message
    ampl.eval("display solve_message;");
    string message = output.getStatus();
-   cout << "##message: " << message << endl;
-   if(localSolver == "worhp_ampl"){
-      cout << "WORHP-log:" << endl;
-      cout << message.substr(0,string::npos);
-      cout << flush;
-   }else if(localSolver == "ipopt"){
-      cout << "IPOPT-log:" << endl;
-      cout << message.substr(19,52);
-      cout << flush;
-   }
+   cout << "Solution status: " << message << endl;
 
    //Trigger the output handler
    ampl.eval("display solve_result;");
    cout << "##" << output.getStatus() << endl;
    //Get output message
-   if(output.getStatus().find("solved") != string::npos){
+   if(output.getStatus().find("solved") != string::npos && ampl_success){
       status = 1;
       //cout << "Optimal Solution found by NLP solver" << endl;
       
@@ -474,10 +488,15 @@ int AMPLmodel::solveNLP(Dynamics::dynamics arc, double& flightTime, double& step
       relativeErrors = computeRelativeError(arc);
 
    }else{
-      cout << "\n\n Failed to solve NLP!, line 475 AMPLmodel.cpp \n\n" << endl;
+      cout << "\n\n Failed to solve NLP!, line 485 AMPLmodel.cpp \n\n" << endl;
+      status = 0;
       error = DBL_MAX;
       flightTime = DBL_MAX;
       step = DBL_MAX;
+      relativeErrors = new double [dscrtSize];
+      for(int t = 0; t < dscrtSize; t++){
+         relativeErrors[t] = DBL_MAX;
+      }
    }
 
    //reset and close AMPL env

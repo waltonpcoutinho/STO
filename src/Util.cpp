@@ -4,7 +4,7 @@ void setSeed()
 {
    // initialise random seed
    int seed = time(NULL);
-   //seed = 1617906577;
+   //seed = 1656559094;
    srand(seed);
    cout << "\n\nRandom seed: " << seed << endl;
 }
@@ -67,6 +67,7 @@ double l2_norm(const double x, const double y, const double z)
 {
    return sqrt(x*x + y*y + z*z);
 }
+
 string genRandStr(const int len){
 
    char key[len];
@@ -158,42 +159,73 @@ double routeAvgStep(glider uav){
    return totalStep/routeSize;
 }
 
+bool checkIfEmpty(fstream& pFile)
+{
+   //test if file is empty by trying to read from it 
+   bool test = pFile.peek() == std::ifstream::traits_type::eof();
+
+   //the test above sets failbit itself, since it reached EOF 
+   //which would disallow the rest of the functions to work
+   //so we need to reset the state of the stream to goodbit
+   pFile.clear();
+   pFile.seekg(0, ios::beg);
+
+   //return the result of the test
+   return test;
+}
+
 void writeRes2File(Data const* dataPtr, double lb, Solution const* sol, string instType)
 {
-   //cout << "globalSol size = " << sol->globalSol.size() << endl;
-   //for(int i = 0; i < sol->globalSol.size(); i++){
-      //cout << "glider " << i << endl;
-      //int routeSize = sol->globalSol[i].route.size();
-      //cout << "glider's route size = " << routeSize << endl;
-      ////for(int j = 0; routeSize; j++){
-      ////}
-   //}
+   //auxiliary vectors
+   vector<double> gliderFlightTime;
+   vector<double> gliderError;
+   vector<double> gliderStep;
 
-   double stoNlpFlTime = routeTotalFlightTime(sol->globalSol[0]);
-   double stoFlTime = routeTotalFlightTime(sol->globalSol[1]);
-
-   double stoNlpError = routeTotalError(sol->globalSol[0]);
-   double stoError = routeTotalError(sol->globalSol[1]);
-
-   double stoNlpStep = routeAvgStep(sol->globalSol[0]);
-   double stoStep = routeAvgStep(sol->globalSol[1]);
-
-   double method1Time = sol->method1Time;
-   double method2Time = sol->method2Time;
+   //compute results for each glider in solution
+   for(int i = 0; i < sol->globalSol.size(); i++){
+      gliderFlightTime.push_back(routeTotalFlightTime(sol->globalSol[i]));
+      gliderError.push_back(routeTotalError(sol->globalSol[i]));
+      gliderStep.push_back(routeAvgStep(sol->globalSol[i]));
+   }
 
    //write results to file
    string resultsPath = "Results/compResults_" + instType + ".out";
-   ofstream writeRes(resultsPath, ios::app);
-   writeRes << dataPtr->fileName << " "
-            << lb << " "
-            << stoNlpFlTime << " "
-            << stoFlTime << " "
-            << stoNlpError << " " 
-            << stoError << " " 
-            << stoNlpStep << " " 
-            << stoStep << " " 
-            << method1Time << " "
-            << method2Time << endl;
+   fstream writeRes(resultsPath, ios::out | ios::in | ios::app);
+
+   //check if file is empty and write header if so
+   if(checkIfEmpty(writeRes)){
+      writeRes << "Instance " << "Lower_bound ";
+      //for each glider (solver or any other alternative) write the following:
+      for(int i = 0; i < sol->globalSol.size();i++){
+         writeRes << "flight_time_" << i << " ";
+      }
+      for(int i = 0; i < sol->globalSol.size();i++){
+         writeRes << "error_" << i << " ";
+      }
+      for(int i = 0; i < sol->globalSol.size();i++){
+         writeRes << "step_" << i << " ";
+      }
+      for(int i = 0; i < sol->globalSol.size();i++){
+         writeRes << "time_" << i << " ";
+      }
+      writeRes << endl;
+   }
+
+   writeRes << dataPtr->fileName << " " << lb << " ";
+
+   for(int i = 0; i < sol->globalSol.size(); i++){
+      writeRes << gliderFlightTime[i] << " ";
+   }
+   for(int i = 0; i < sol->globalSol.size(); i++){
+      writeRes << gliderError[i] << " ";
+   }
+   for(int i = 0; i < sol->globalSol.size(); i++){
+      writeRes << gliderStep[i] << " ";
+   }
+   for(int i = 0; i < sol->computingTime.size(); i++){
+      writeRes << sol->computingTime[i] << " ";
+   }
+   writeRes << endl;
    writeRes.close();
 }
 

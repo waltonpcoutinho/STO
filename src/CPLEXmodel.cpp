@@ -75,7 +75,7 @@ IloAlgorithm::Status CPLEXmodel::solveModel(const Dynamics::dynamics leg, double
       SOCP.setParam(IloCplex::TiLim, 3600);
       SOCP.setParam(IloCplex::Threads, 1);
       SOCP.setParam(IloCplex::ParallelMode, 1);
-      SOCP.exportModel("Results/SOCPmodel.lp");
+      //SOCP.exportModel("Results/SOCPmodel.lp");
       SOCP.solve();
       status = SOCP.getStatus();      
       //if feasible get solution
@@ -272,7 +272,7 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
 
    //error bound constraints
    //===============================================
-   for(int t = 0; t < T-1; t++){
+   for(int t = 0; t < T; t++){
       for(int s = 0; s < stateSize; s++){
          IloRange cons = (auxZ[t] - epsilon[t][s] >= 0);
          sprintf(name,"auxZ_mod1_(%d,%d)",t,s);
@@ -280,23 +280,22 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
          model.add(cons);
       }
    } 
-   for(int t = 0; t < T-1; t++){
+   for(int t = 0; t < T; t++){
       for(int s = 0; s < stateSize; s++){
          IloRange cons = (auxZ[t] + epsilon[t][s] >= 0);
          sprintf(name,"auxZ_mod2_(%d,%d)",t,s);
          cons.setName(name);
          model.add(cons);
       }
-   } 
-   for(int t = 0; t < T-1; t++){
-      for(int s = 0; s < stateSize; s++){
-         IloRange cons = (auxZ[t] <= 0.5*h*h*(normA*normyDotUb + normB*normuDotUb));
-         sprintf(name,"auxZ_mod2_(%d,%d)",t,s);
-         cons.setName(name);
-         model.add(cons);
-      }
-   } 
- 
+   }
+
+   for(int t = 0; t < T; t++){
+      IloRange cons = (auxZ[t] <= 0.5*h*h*(normA*normyDotUb + normB*normuDotUb));
+      sprintf(name,"auxZ_mod2_(%d)",t);
+      cons.setName(name);
+      model.add(cons);
+   }
+    
    //set of system dynamics constraints
    //===============================================
    for(int t = 0; t < T-1; t++){
@@ -312,29 +311,8 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
          for(int j = 0; j < controlSize; j++){
             exp += h*leg.get_B(i,j)*Ut[j] - h*leg.get_B(i,j)*leg.get_Ueq(j);
          }
-         exp -= epsilon[t][i];
-         IloRange cons = (exp <= 0);
-         sprintf(name,"sys1(A%d,)_t%d",i,t);
-         cons.setName(name);
-         model.add(cons);
-      }
-   }   
-
-   for(int t = 0; t < T-1; t++){
-      vector <IloNumVar> Yt = {x[t],y[t],z[t],vel[t],gamma[t],phi[t]};
-      vector <IloNumVar> Ytp1 = {x[t+1],y[t+1],z[t+1],vel[t+1],gamma[t+1],phi[t+1]};
-      vector <IloNumVar> Ut = {CL[t],mu[t]};
-      for(int i = 0; i < stateSize; i++){
-         IloExpr exp(env);
-         exp -= Ytp1[i];
-         for(int j = 0; j < stateSize; j++){
-               exp += (h*leg.get_A(i,j) + ID[i][j])*Yt[j] - h*leg.get_A(i,j)*Yeq[j];
-         }
-         for(int j = 0; j < controlSize; j++){
-            exp += h*leg.get_B(i,j)*Ut[j] - h*leg.get_B(i,j)*leg.get_Ueq(j);
-         }
          exp += epsilon[t][i];
-         IloRange cons = (exp >= 0);
+         IloRange cons = (exp == 0);
          sprintf(name,"sys2(A%d,)_t%d",i,t);
          cons.setName(name);
          model.add(cons);
@@ -366,23 +344,23 @@ void CPLEXmodel::createModel(IloModel model, const Dynamics::dynamics leg, doubl
    IloNumVar rad(env, 0, IloInfinity, ILOFLOAT);
    model.add(x[T-1] - Yf[0] == aux1);
    model.add(y[T-1] - Yf[1] == aux2);
-   model.add(z[T-1] - Yf[2] == aux3);
+   //model.add(z[T-1] - Yf[2] == aux3);
    if(!leg.isLanding){
       //add cone constraints
       model.add(rad == (z[T-1] + leg.fRadius)*tan(alpha));
       IloConstraint vol = (aux1*aux1 + aux2*aux2 - rad*rad <= 0);
-      z[T-1].setBounds(leg.fzMin,leg.fzMax);
       sprintf(name,"final_cone");
       vol.setName(name);
       model.add(vol);
       //define level flight (photographing) constraints
+      z[T-1].setBounds(leg.fzMin,leg.fzMax);
       gamma[T-1].setBounds(-0.09,0.09);
       mu[T-1].setBounds(-0.09,0.09);
    }else{
-      IloConstraint vol = (aux1*aux1 + aux2*aux2 + aux3*aux3 <= leg.fRadius);
+      IloConstraint land = (aux1*aux1 + aux2*aux2 + z[T-1]*z[T-1] <= leg.fRadius*leg.fRadius);
       sprintf(name,"landing_region");
-      vol.setName(name);
-      model.add(vol);
+      land.setName(name);
+      model.add(land);
    }
    //end visiting/volume constraits
    //===============================================

@@ -131,6 +131,8 @@ double** normTaylor1st, double** relEpsilons)
 
             if(statusNLP == 1){
                status = IloAlgorithm::Optimal;
+            }else{
+               status = IloAlgorithm::Infeasible;
             }
             /*
              * FINISH STO-NLP
@@ -168,8 +170,8 @@ double** normTaylor1st, double** relEpsilons)
             }
             
             if(status != IloAlgorithm::Optimal){
-               cerr << "\n\n  ### TrajOpt.cpp line 171 ### \n\n" << endl;
-               exit(1);
+               status = IloAlgorithm::Infeasible;
+               break;
             }
 
             //set up STO solution as initial guess for STO-NLP
@@ -209,6 +211,9 @@ double** normTaylor1st, double** relEpsilons)
          }else{
             infsblArc = k;
             cout << "Arc (" << route[k] << "," << route[k+1] << ") infeasible!" << endl;
+            flightTimes[k] = DBL_MAX;
+            stepSizes[k] = DBL_MAX;
+            errors[k] = DBL_MAX;
             return IloAlgorithm::Infeasible;
          }
          //---------------------------------------------------------------------
@@ -244,7 +249,7 @@ double** normTaylor1st, double** relEpsilons)
          vfAux[2] = (zf - zi)/stepOpt;
       }
    }else{
-      cout << "The status of this route is infesible!" << endl;
+      cout << "The status of this route is infeasible!" << endl;
       return IloAlgorithm::Infeasible;
    };
    //##################################################
