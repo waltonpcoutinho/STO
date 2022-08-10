@@ -4,7 +4,7 @@ void setSeed()
 {
    // initialise random seed
    int seed = time(NULL);
-   //seed = 1656559094;
+   seed = 1637296301;
    srand(seed);
    cout << "\n\nRandom seed: " << seed << endl;
 }
@@ -263,6 +263,10 @@ void writeSol2File(Data const* data,vector<glider> gliders)
    char destination[100];
    strcpy(destination,"Results/Solutions/solution_");
    strcat(destination,data->fileName.c_str());
+   //append discretisation size to file name
+   char aux[10];
+   sprintf(aux,"_N_%d_",data->T);
+   strcat(destination,aux);
    strcat(destination,".out");
    
    //delete file with solutions iff there is one

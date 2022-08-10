@@ -95,14 +95,14 @@ int main(int argc, char** argv)
    cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
    sol->globalSol.push_back(drone);
 
-   //call STO-NLP
-   nlpPtr->setLocalSolver("octeract-engine");
-   startingTime = wallTime();
-   callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
-   sol->computingTime.push_back(wallTime() - startingTime);
-   cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
-   cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
-   sol->globalSol.push_back(drone);
+   // //call STO-NLP
+   // nlpPtr->setLocalSolver("octeract-engine");
+   // startingTime = wallTime();
+   // callTrajOpt(drone, dataPtr, gliderPtr, modelPtr, nlpPtr, "STO-NLP");
+   // sol->computingTime.push_back(wallTime() - startingTime);
+   // cout << "STO-NLP ojb. val. = " << drone.routeCost << endl;
+   // cout << "STO-NLP time(s) " << sol->computingTime.back() << endl;
+   // sol->globalSol.push_back(drone);
 
    // //call STO-NLP
    // nlpPtr->setLocalSolver("bonmin");
